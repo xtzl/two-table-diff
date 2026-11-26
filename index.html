@@ -74,6 +74,8 @@ select:focus{border-color:#A9BFE8;box-shadow:0 0 0 3px rgba(47,85,151,.08)}
 .chip:hover{border-color:#C3CEE3;color:var(--txt)}
 .chip.on{background:#EEF3FC;border-color:#A9BFE8;color:var(--brand);font-weight:500}
 .hint{font-size:12px;color:#A8B1C4}
+.autonote{flex-basis:100%;font-size:11.5px;color:#98A2B3;line-height:1.65;margin:-4px 0 0}
+.autonote code{font-family:ui-monospace,Consolas,monospace;font-size:11px;background:#F4F6FA;padding:1px 5px;border-radius:4px;border:1px solid var(--line2);color:#667085}
 
 /* ---------- stats ---------- */
 .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:18px}
@@ -231,6 +233,7 @@ td.rowno{color:#A8B1C4;font-variant-numeric:tabular-nums;font-size:11.5px}
       <label>选项</label>
       <label class="chk"><input type="checkbox" id="ignoreCase" checked> 忽略大小写</label>
     </div>
+    <p class="autonote">自动处理：清洗首尾的反引号 / 引号 / 逗号等符号，并把 <code>2026/9/10 8:37:15</code> 与 <code>2026-09-10 08:37:15</code> 视为同一时刻</p>
   </section>
 
   <section id="warnBox"></section>
@@ -270,11 +273,43 @@ function nfkc(s){
   try { return s.normalize('NFKC'); } catch(e){ return s; }
 }
 
-/* 比对用的规范化：去零宽、nbsp、全半角、首尾空格、压缩空白 */
+/* 首尾噪音符号：反引号、各类引号、逗号、分号、顿号、竖线、星号、井号等 */
+var NOISE_HEAD = /^[\s`'"“”‘’「」『』,，;；、:：|*#=+~。]+/;
+var NOISE_TAIL = /[\s`'"“”‘’「」『』,，;；、:：|*#=+~。]+$/;
+
+function stripNoise(s){
+  return String(s).replace(NOISE_HEAD, '').replace(NOISE_TAIL, '');
+}
+
+function pad2(n){ return n < 10 ? '0' + n : '' + n; }
+
+/* 日期时间：兼容 2026/9/10 8:37:15、2026-09-10 08:37:15、2026年9月10日 13:23、2026.9.10T13:23:48.000 */
+var DT_RE = /^(\d{4})\s*[-/.年]\s*(\d{1,2})\s*[-/.月]\s*(\d{1,2})\s*日?(?:[T\s]+(\d{1,2})\s*:\s*(\d{1,2})(?:\s*:\s*(\d{1,2}))?(?:\.\d+)?)?$/;
+
+function normDateTime(s){
+  var m = String(s).trim().match(DT_RE);
+  if (!m) return null;
+  var y = +m[1], mo = +m[2], d = +m[3];
+  if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+  var out = y + '-' + pad2(mo) + '-' + pad2(d);
+  if (m[4] === undefined) return out;
+  var hh = +m[4], mi = +m[5];
+  var ss = m[6] === undefined ? 0 : +m[6];
+  if (hh > 23 || mi > 59 || ss > 59) return null;
+  return out + ' ' + pad2(hh) + ':' + pad2(mi) + ':' + pad2(ss);
+}
+
+/* 比对用的规范化：去零宽 → 全半角统一 → 清洗首尾噪音 → 压缩空白 → 时间归一化 */
 function normKey(v, ignoreCase){
   if (v === null || v === undefined) return '';
   var s = String(v).replace(ZERO_WIDTH, '').replace(/\u00A0/g, ' ');
-  s = nfkc(s).trim().replace(/\s+/g, ' ');
+  s = nfkc(s);
+  s = stripNoise(s).trim().replace(/\s+/g, ' ');
+  if (!s) return '';
+
+  var dt = normDateTime(s);
+  if (dt !== null) return dt;
+
   if (ignoreCase) s = s.toUpperCase();
   return s;
 }
@@ -290,16 +325,10 @@ function parseNumber(v){
   return isFinite(n) ? n : null;
 }
 
-var DATE_RE = /^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/;
+/* 日期解析：复用 normDateTime，保证不丢时分秒（否则 13:23:48 与 13:23:49 会误判相等） */
 function parseDate(v){
   if (v === null || v === undefined) return null;
-  var s = nfkc(String(v)).trim().replace(/年|月/g, '-').replace(/日$/, '');
-  s = s.split(/\s+/)[0].replace(/\s+/g, '');
-  var m = s.match(DATE_RE);
-  if (!m) return null;
-  var y = +m[1], mo = +m[2], d = +m[3];
-  if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
-  return y + '-' + (mo < 10 ? '0' : '') + mo + '-' + (d < 10 ? '0' : '') + d;
+  return normDateTime(nfkc(String(v)));
 }
 
 /* 值是否等价：先文本比，再数字比（188.00 == 188），再日期比（2026/11/1 == 2026-11-01） */
@@ -709,9 +738,17 @@ function analyze(){
   idxA.forEach(function(v){ validA += v.length; });
   idxB.forEach(function(v){ validB += v.length; });
 
+  var tHit = 0, tAll = 0;
+  idxA.forEach(function(v, k){
+    if (tAll >= 200) return;
+    tAll++;
+    if (DT_RE.test(k)) tHit++;
+  });
+  var timeLike = tAll > 0 && tHit / tAll >= 0.6;
+
   state.result = {
     items: items, counts: counts, cmp: cmp,
-    dupA: dupA, dupB: dupB,
+    dupA: dupA, dupB: dupB, timeLike: timeLike,
     skipped: (A.rows.length - validA) + (B.rows.length - validB)
   };
 
@@ -721,8 +758,8 @@ function analyze(){
 }
 
 function displayKey(row, ki){
-  if (ki === -1) return (row[0] || '') + ' + ' + (row[1] || '');
-  return String(row[ki] === undefined ? '' : row[ki]);
+  if (ki === -1) return stripNoise(row[0] || '') + ' + ' + stripNoise(row[1] || '');
+  return stripNoise(row[ki] === undefined ? '' : row[ki]);
 }
 
 /* ============================================================
@@ -755,12 +792,15 @@ function renderWarnings(){
 
   var msgs = [];
   if (r.dupA.length){
-    msgs.push('<b>表 A 有 ' + r.dupA.length + ' 个重复的键</b>（例如 ' +
+    var tailA = r.timeLike
+      ? '时间戳类数据同一时刻有多条记录属正常，只是无法逐条一一对应，会取第一条配对。'
+      : '同一键出现多行时只拿第一条去比对，若单号本身不唯一，建议改用「组合键」。';
+    msgs.push('<b>表 A 有 ' + r.dupA.length + ' 个键重复出现</b>（例如 ' +
       r.dupA.slice(0, 3).map(function(d){ return '<code>' + esc(d.key) + '</code> ×' + d.count; }).join('、') +
-      '）。同一键出现多行时，只会拿第一条去比对，建议改用「组合键」或换一列当比对键。');
+      '）。' + tailA);
   }
   if (r.dupB.length){
-    msgs.push('<b>表 B 有 ' + r.dupB.length + ' 个重复的键</b>（例如 ' +
+    msgs.push('<b>表 B 有 ' + r.dupB.length + ' 个键重复出现</b>（例如 ' +
       r.dupB.slice(0, 3).map(function(d){ return '<code>' + esc(d.key) + '</code> ×' + d.count; }).join('、') + '）。');
   }
   if (r.skipped > 0){
