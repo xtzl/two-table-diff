@@ -71,10 +71,10 @@ button.primary:hover{background:#274880;border-color:#274880}
 
 /* ---------- settings ---------- */
 .settings{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:13px 15px;margin-top:14px;display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap}
-.field{display:flex;flex-direction:column;gap:7px;min-width:0}
-.field.grow{flex:1}
+.field{display:flex;flex-direction:column;gap:7px;min-width:0;flex:none}
+.field.grow{flex:1 1 340px;min-width:260px}
 .field>label{font-size:11.5px;color:var(--muted);font-weight:500;letter-spacing:.02em}
-select{font-family:inherit;font-size:13px;padding:6px 26px 6px 10px;border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--txt);cursor:pointer;outline:0;appearance:none;
+select{font-family:inherit;font-size:13px;padding:6px 26px 6px 10px;border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--txt);cursor:pointer;outline:0;appearance:none;max-width:360px;
   background-image:url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B7590' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
   background-repeat:no-repeat;background-position:right 8px center}
 select:focus{border-color:#A9BFE8;box-shadow:0 0 0 3px rgba(47,85,151,.08)}
@@ -83,7 +83,10 @@ select:focus{border-color:#A9BFE8;box-shadow:0 0 0 3px rgba(47,85,151,.08)}
 .chip:hover{border-color:#C3CEE3;color:var(--txt)}
 .chip.on{background:#EEF3FC;border-color:#A9BFE8;color:var(--brand);font-weight:500}
 .hint{font-size:12px;color:#A8B1C4}
-.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff;height:31px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff;height:31px;flex:none}
+.key-pair{display:flex;align-items:center;gap:7px;flex-wrap:nowrap}
+.key-pair select{flex:1 1 0;min-width:0;max-width:238px}
+.kp-sep{color:#C3CEE3;font-size:12px;flex:none;line-height:1}
 .seg button{border:0;border-radius:0;padding:0 15px;font-size:12.5px;background:transparent;color:var(--muted);height:100%;line-height:31px}
 .seg button:hover{background:#F7F9FC;border:0}
 .seg button.on{background:var(--brand);color:#fff;font-weight:500}
@@ -146,6 +149,17 @@ thead th{position:sticky;top:0;background:#F7F9FC;text-align:left;padding:9px 12
 tbody td{padding:8px 12px;border-bottom:1px solid var(--line2);white-space:nowrap;vertical-align:middle}
 tbody tr:last-child td{border-bottom:0}
 tbody tr:hover td{background:#FAFBFD}
+tbody tr.rowclick{cursor:pointer}
+tbody tr.det td{padding:0;background:#F7F9FC;border-bottom:1px solid var(--line2)}
+tbody tr.det:hover td{background:#F7F9FC}
+.det-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;padding:13px 14px 15px}
+.det-box{min-width:0}
+.det-hd{font-size:11.5px;font-weight:600;color:#667085;margin-bottom:8px;letter-spacing:.02em}
+.det-list{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 14px;font-size:12px;line-height:1.55}
+.det-k{color:#98A2B3;white-space:nowrap}
+.det-v{color:var(--txt);word-break:break-all;font-family:ui-monospace,Consolas,monospace}
+.det-none{font-size:12px;color:#A8B1C4}
+@media(max-width:900px){.det-grid{grid-template-columns:1fr;gap:14px}}
 td.key{font-family:ui-monospace,Consolas,monospace;font-weight:500;font-size:12px}
 td.rowno{color:#A8B1C4;font-variant-numeric:tabular-nums;font-size:11.5px}
 .tag{display:inline-block;font-size:11px;font-weight:600;padding:2px 7px;border-radius:5px;white-space:nowrap;line-height:1.5}
@@ -172,7 +186,7 @@ td.rowno{color:#A8B1C4;font-variant-numeric:tabular-nums;font-size:11.5px}
   .panes{grid-template-columns:minmax(0,1fr)}
   .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
   .settings{gap:16px}
-  .field.grow{flex-basis:100%;min-width:0}
+  .field.grow{flex:1 1 100%;min-width:0}
   .toolbar{align-items:flex-start;flex-direction:column}
 }
 @media(max-width:560px){
@@ -255,8 +269,12 @@ td.rowno{color:#A8B1C4;font-variant-numeric:tabular-nums;font-size:11.5px}
 
   <section class="settings">
     <div class="field">
-      <label for="keySel">比对键（用哪一列认「同一条」）</label>
-      <select id="keySel"><option value="0">第 1 列</option></select>
+      <label>比对键（两边列位置不同也能选）</label>
+      <div class="key-pair">
+        <select id="keySelA" aria-label="表A用哪一列"><option value="0">第 1 列</option></select>
+        <span class="kp-sep">↔</span>
+        <select id="keySelB" aria-label="表B用哪一列"><option value="0">第 1 列</option></select>
+      </div>
     </div>
     <div class="field" id="modeField" hidden>
       <label>匹配模式</label>
@@ -326,8 +344,8 @@ td.rowno{color:#A8B1C4;font-variant-numeric:tabular-nums;font-size:11.5px}
 /* ============================================================
    版本信息 —— 发版时由 release.js 自动写入，不要手改
    ============================================================ */
-var APP_VERSION = 'v1.4.0';
-var BUILD_TIME = '2026-11-27 00:54';
+var APP_VERSION = 'v1.5.0';
+var BUILD_TIME = '2026-11-27 01:06';
 
 /* ============================================================
    工具函数
@@ -450,7 +468,7 @@ function splitRows(text){
   return out;
 }
 
-var DELIM_CANDIDATES = ['\t', ';', ',', '|'];
+var DELIM_CANDIDATES = ['\t', ',', '|'];
 var THOUSANDS_RE = /^[¥$€£]?\s?-?\d{1,3}(,\d{3})+(\.\d+)?\s?元?$/;
 
 /* 整列都是「1,234.00」这种千分位数字时，逗号不是分隔符 */
@@ -528,6 +546,19 @@ function parseTable(text, delimMode){
     while (rows[i].length < width) rows[i].push('');
   }
 
+  /* 裁掉整列全空的尾部列：从 Excel 复制时常把使用区域里的空列一起带出来，
+     不裁会让列数虚高几十列，比对键下拉被塞满，用户根本找不到要用的列 */
+  while (width > 1){
+    var empty = true;
+    for (i = 0; i < rows.length; i++){
+      var tail = rows[i][width - 1];
+      if (tail !== undefined && String(tail).trim() !== ''){ empty = false; break; }
+    }
+    if (!empty) break;
+    for (i = 0; i < rows.length; i++) rows[i].pop();
+    width--;
+  }
+
   var lineNos = [];
   for (i = 0; i < lines.length; i++) lineNos.push(lines[i].lineNo);
 
@@ -581,7 +612,9 @@ function detectHeader(rows){
    ============================================================ */
 var state = {
   A: null, B: null,
-  keyIndex: 0,
+  keyIndexA: 0,
+  keyIndexB: 0,
+  linkKey: true,
   cmpIndexes: [],
   delim: 'auto',
   ignoreCase: true,
@@ -589,6 +622,7 @@ var state = {
   tolerance: 5,
   filter: 'all',
   query: '',
+  expanded: -1,
   result: null,
   cmpTouched: false,
   colSig: ''
@@ -674,70 +708,114 @@ function shortName(idx){
 
 var AMOUNT_RE = /(金额|实收|应收|交易额|支付|价格|单价|amount|price|total|money)/i;
 
-function rebuildColumnUI(){
+/* 取该列第一个非空值做样本，帮用户在几十列里认出要用哪一列 */
+function colSample(rows, idx){
+  if (!rows || !rows.length) return '';
+  for (var i = 0; i < rows.length && i < 40; i++){
+    var v = rows[i][idx];
+    if (v !== undefined && v !== null && String(v).trim() !== '') return String(v).trim().slice(0, 16);
+  }
+  return '';
+}
+
+function makeKeyOption(side, idx){
+  var info = state[side];
+  var opt = document.createElement('option');
+  opt.value = String(idx);
+  var name = (info.header && info.header[idx]) ? info.header[idx] : '第' + (idx + 1) + '列';
+  var ex = colSample(info.rows, idx);
+  opt.textContent = name + '（第' + (idx + 1) + '列）' + (ex ? ' · 例 ' + ex : '');
+  return opt;
+}
+
+/* 值比对列：必须两边都有这一列才有意义，所以取两表列数的较小值 */
+function rebuildChips(){
   var A = state.A, B = state.B;
-  var width = Math.max(A ? A.width : 0, B ? B.width : 0);
-  var sel = $('keySel');
+  var width = Math.min(A ? A.width : 0, B ? B.width : 0);
   var box = $('cmpChips');
-
-  sel.innerHTML = '';
-  if (!width){
-    sel.innerHTML = '<option value="0">第 1 列</option>';
-    box.innerHTML = '<span class="hint">粘贴数据后这里会列出可选的列</span>';
-    state.cmpIndexes = [];
-    return;
-  }
-
-  for (var i = 0; i < width; i++){
-    var opt = document.createElement('option');
-    opt.value = String(i);
-    opt.textContent = shortName(i) + '（第' + (i + 1) + '列）';
-    sel.appendChild(opt);
-  }
-  if (width >= 2){
-    var optC = document.createElement('option');
-    optC.value = '-1';
-    optC.textContent = '组合键：第1列 + 第2列';
-    sel.appendChild(optC);
-  }
-
-  if (state.keyIndex !== -1 && state.keyIndex >= width) state.keyIndex = 0;
-  if (state.keyIndex === -1 && width < 2) state.keyIndex = 0;
-  sel.value = String(state.keyIndex);
-
-  /* 过滤掉越界与键列 */
-  var keep = [];
-  for (var c = 0; c < state.cmpIndexes.length; c++){
-    var ci = state.cmpIndexes[c];
-    if (ci < width && ci !== state.keyIndex) keep.push(ci);
-  }
-  state.cmpIndexes = keep;
-
-  /* 首次自动挑出「金额」类列 */
-  if (!state.cmpTouched && !keep.length && state.A && state.A.header){
-    var guess = [];
-    for (var g = 0; g < width; g++){
-      if (g === state.keyIndex) continue;
-      if (AMOUNT_RE.test(String(state.A.header[g] || ''))) guess.push(g);
-    }
-    state.cmpIndexes = guess.slice(0, 3);
-  }
-
   box.innerHTML = '';
   var count = 0;
+
   for (var k = 0; k < width; k++){
-    if (k === state.keyIndex) continue;
+    if (k === state.keyIndexA || k === state.keyIndexB) continue;
     count++;
     var btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'chip' + (state.cmpIndexes.indexOf(k) >= 0 ? ' on' : '');
     btn.dataset.idx = String(k);
-    btn.textContent = colName(k);
+    var na = colNameOf('A', k), nb = colNameOf('B', k);
+    btn.textContent = na;
+    if (na !== nb) btn.title = '表A：' + na + '\n表B：' + nb;
     box.appendChild(btn);
   }
+
   if (!count){
-    box.innerHTML = '<span class="hint">当前只有一列，只能比对「有没有」，无法比对数值</span>';
+    box.innerHTML = '<span class="hint">' +
+      (width ? '除比对键外没有其他共同列' : '只有一边有数据，粘贴另一边后即可比对数值') +
+      '</span>';
   }
+}
+
+function rebuildColumnUI(){
+  var A = state.A, B = state.B;
+  var wa = A ? A.width : 0;
+  var wb = B ? B.width : 0;
+  var selA = $('keySelA');
+  var selB = $('keySelB');
+
+  selA.innerHTML = '';
+  selB.innerHTML = '';
+
+  if (!wa && !wb){
+    selA.innerHTML = '<option value="0">第 1 列</option>';
+    selB.innerHTML = '<option value="0">第 1 列</option>';
+    $('cmpChips').innerHTML = '<span class="hint">粘贴数据后这里会列出可选的列</span>';
+    state.cmpIndexes = [];
+    return;
+  }
+
+  var i;
+  for (i = 0; i < wa; i++) selA.appendChild(makeKeyOption('A', i));
+  for (i = 0; i < wb; i++) selB.appendChild(makeKeyOption('B', i));
+
+  if (wa >= 2){
+    var oc = document.createElement('option');
+    oc.value = '-1';
+    oc.textContent = '组合键：第1列 + 第2列';
+    selA.appendChild(oc);
+  }
+  if (wb >= 2){
+    var oc2 = document.createElement('option');
+    oc2.value = '-1';
+    oc2.textContent = '组合键：第1列 + 第2列';
+    selB.appendChild(oc2);
+  }
+
+  if (state.keyIndexA !== -1 && state.keyIndexA >= wa) state.keyIndexA = 0;
+  if (state.keyIndexA === -1 && wa < 2) state.keyIndexA = 0;
+  if (state.keyIndexB !== -1 && state.keyIndexB >= wb) state.keyIndexB = 0;
+  if (state.keyIndexB === -1 && wb < 2) state.keyIndexB = 0;
+
+  selA.value = String(state.keyIndexA);
+  selB.value = String(state.keyIndexB);
+
+  var keep = [];
+  for (var c = 0; c < state.cmpIndexes.length; c++){
+    var ci = state.cmpIndexes[c];
+    if (ci < wa && ci < wb && ci !== state.keyIndexA && ci !== state.keyIndexB) keep.push(ci);
+  }
+  state.cmpIndexes = keep;
+
+  if (!state.cmpTouched && !keep.length && A && A.header){
+    var guess = [];
+    for (var g = 0; g < Math.min(wa, wb); g++){
+      if (g === state.keyIndexA || g === state.keyIndexB) continue;
+      if (AMOUNT_RE.test(String(A.header[g] || ''))) guess.push(g);
+    }
+    state.cmpIndexes = guess.slice(0, 3);
+  }
+
+  rebuildChips();
 }
 
 /* ============================================================
@@ -783,14 +861,14 @@ var MAX_PAIRS = 120000;
 
 /* 模糊配对：在容差内做一对一贪心，优先配对时间差最小的。
    先按差值升序排全部候选对，再依次认领，保证不会出现一条 A 被多条 B 抢走的错配。 */
-function fuzzyPair(rowsA, rowsB, ki, aList, bList, tol){
+function fuzzyPair(rowsA, rowsB, kiA, kiB, aList, bList, tol){
   var as = [], bs = [], i, t;
   for (i = 0; i < aList.length; i++){
-    t = dtToSec(normKey(rowsA[aList[i]][ki], false));
+    t = dtToSec(normKey(rowsA[aList[i]][kiA], false));
     if (t !== null) as.push({ i: aList[i], t: t });
   }
   for (i = 0; i < bList.length; i++){
-    t = dtToSec(normKey(rowsB[bList[i]][ki], false));
+    t = dtToSec(normKey(rowsB[bList[i]][kiB], false));
     if (t !== null) bs.push({ i: bList[i], t: t });
   }
   if (!as.length || !bs.length) return [];
@@ -828,6 +906,7 @@ function fuzzyPair(rowsA, rowsB, ki, aList, bList, tol){
 
 function analyze(){
   var t0 = nowMs();
+  state.expanded = -1;
   var A = state.A, B = state.B;
 
   if (!A || !B || !A.rows.length || !B.rows.length){
@@ -839,15 +918,16 @@ function analyze(){
     return;
   }
 
-  var ki = state.keyIndex;
+  var kiA = state.keyIndexA;
+  var kiB = state.keyIndexB;
   var cmp = [];
   for (var c = 0; c < state.cmpIndexes.length; c++){
     var ci = state.cmpIndexes[c];
     if (ci < A.width && ci < B.width) cmp.push(ci);
   }
 
-  var idxA = buildIndex(A.rows, ki);
-  var idxB = buildIndex(B.rows, ki);
+  var idxA = buildIndex(A.rows, kiA);
+  var idxB = buildIndex(B.rows, kiB);
 
   var dupA = [], dupB = [];
   idxA.forEach(function(v, k){ if (v.length > 1) dupA.push({ key: k, count: v.length }); });
@@ -891,7 +971,7 @@ function analyze(){
   var fuzzyAdded = 0;
 
   if (tol > 0 && timeLike && pendingA.length && pendingB.length){
-    var fp = fuzzyPair(A.rows, B.rows, ki, pendingA, pendingB, tol);
+    var fp = fuzzyPair(A.rows, B.rows, kiA, kiB, pendingA, pendingB, tol);
     if (fp.length){
       var usedA = {}, usedB = {};
       for (var f = 0; f < fp.length; f++){
@@ -919,7 +999,7 @@ function analyze(){
     var type = pr.delta > 0 ? 'fuzzy' : (diffs.length ? 'diff' : 'same');
     items.push({
       type: type,
-      key: displayKey(A.rows[pr.ai], ki),
+      key: displayKey(A.rows[pr.ai], kiA),
       ai: pr.ai, bi: pr.bi, diffs: diffs, delta: pr.delta,
       dup: pr.dup
     });
@@ -929,7 +1009,7 @@ function analyze(){
   for (m = 0; m < pendingA.length; m++){
     items.push({
       type: 'onlyA',
-      key: displayKey(A.rows[pendingA[m]], ki),
+      key: displayKey(A.rows[pendingA[m]], kiA),
       ai: pendingA[m], bi: -1, diffs: [], delta: 0, dup: false
     });
   }
@@ -938,13 +1018,16 @@ function analyze(){
   for (m = 0; m < pendingB.length; m++){
     items.push({
       type: 'onlyB',
-      key: displayKey(B.rows[pendingB[m]], ki),
+      key: displayKey(B.rows[pendingB[m]], kiB),
       ai: -1, bi: pendingB[m], diffs: [], delta: 0, dup: false
     });
   }
 
   var counts = { onlyA: 0, onlyB: 0, diff: 0, same: 0, fuzzy: 0 };
-  for (m = 0; m < items.length; m++) counts[items[m].type]++;
+  for (m = 0; m < items.length; m++){
+    items[m]._i = m;
+    counts[items[m].type]++;
+  }
 
   var validA = 0, validB = 0;
   idxA.forEach(function(v){ validA += v.length; });
@@ -1091,15 +1174,16 @@ function renderTable(){
   for (var c = 0; c < cmp.length; c++) html += '<th style="width:1%">' + esc(colName(cmp[c])) + '</th>';
   html += '<th style="width:62px">A 行</th><th style="width:62px">B 行</th><th></th></tr></thead><tbody>';
 
+  var colCount = cmp.length + 5;
   for (var t = 0; t < shown.length; t++){
     var it = shown[t];
     var tagText = it.type === 'fuzzy' ? ('近似 ' + it.delta + 's') : TAGS[it.type];
-    html += '<tr>';
+    html += '<tr class="rowclick" data-idx="' + it._i + '">';
     html += '<td><span class="tag ' + it.type + '">' + tagText + '</span>' +
             (it.dup ? '<span class="dup" title="该键在表中出现多次">重复</span>' : '') + '</td>';
 
     if (it.type === 'fuzzy' && it.bi >= 0){
-      var bKey = displayKey(state.B.rows[it.bi], state.keyIndex);
+      var bKey = displayKey(state.B.rows[it.bi], state.keyIndexB);
       html += '<td class="key"><span class="was">' + markDiff(it.key, bKey) + '</span><span class="arw">→</span><span class="pnow">' + markDiff(bKey, it.key) + '</span></td>';
     } else {
       html += '<td class="key">' + esc(it.key) + '</td>';
@@ -1124,6 +1208,8 @@ function renderTable(){
     html += '<td class="rowno">' + (it.bi >= 0 ? state.B.lineNos[it.bi] : '—') + '</td>';
     html += '<td></td>';
     html += '</tr>';
+
+    if (state.expanded === it._i) html += detailRow(it, colCount);
   }
   html += '</tbody></table>';
 
@@ -1134,10 +1220,52 @@ function renderTable(){
   wrap.innerHTML = html;
 }
 
+function colNameOf(side, idx){
+  var info = state[side];
+  if (info && info.header && info.header[idx]) return info.header[idx];
+  return '第' + (idx + 1) + '列';
+}
+
 function keyColumnLabel(){
-  if (state.keyIndex === -1) return '组合键（第1列+第2列）';
-  if (state.A && state.A.header) return shortName(state.keyIndex);
-  return '比对键';
+  var a = state.keyIndexA, b = state.keyIndexB;
+  if (a === -1 || b === -1) return '组合键';
+  var na = colNameOf('A', a);
+  var nb = colNameOf('B', b);
+  if (na === nb) return na;
+  return na + ' ↔ ' + nb;
+}
+
+/* 展开行：把这条记录在两边的完整字段并排摊开，方便直接核对 */
+function detailRow(it, colspan){
+  return '<tr class="det"><td colspan="' + colspan + '"><div class="det-grid">' +
+    detailCol('A', it.ai) + detailCol('B', it.bi) +
+    '</div></td></tr>';
+}
+
+function detailCol(side, rowIdx){
+  var info = state[side];
+  var name = '表 ' + side;
+
+  if (!info || rowIdx < 0 || !info.rows[rowIdx]){
+    return '<div class="det-box"><div class="det-hd">' + name + '</div>' +
+           '<div class="det-none">这边没有对应的记录</div></div>';
+  }
+
+  var row = info.rows[rowIdx];
+  var html = '<div class="det-box"><div class="det-hd">' + name + ' · 第 ' + info.lineNos[rowIdx] + ' 行</div><div class="det-list">';
+  var shown = 0;
+
+  for (var i = 0; i < row.length; i++){
+    var v = row[i] === undefined || row[i] === null ? '' : stripNoise(String(row[i])).trim();
+    if (!v) continue;
+    var label = (info.header && info.header[i]) ? info.header[i] : '第' + (i + 1) + '列';
+    html += '<span class="det-k">' + esc(label) + '</span><span class="det-v">' + esc(v) + '</span>';
+    shown++;
+  }
+
+  if (!shown) html += '<span class="det-k">—</span><span class="det-v det-none">整行为空</span>';
+  html += '</div></div>';
+  return html;
 }
 
 function renderTabs(){
@@ -1207,7 +1335,7 @@ function buildMatrix(){
     var typeText = it.type === 'fuzzy' ? ('近似 ' + it.delta + 's') : TAGS[it.type];
     var keyCell = it.key;
     if (it.type === 'fuzzy' && it.bi >= 0){
-      keyCell = it.key + ' -> ' + displayKey(state.B.rows[it.bi], state.keyIndex);
+      keyCell = it.key + ' -> ' + displayKey(state.B.rows[it.bi], state.keyIndexB);
     }
     var line = [typeText, keyCell];
     for (var a = 0; a < cmp.length; a++) line.push(it.ai >= 0 ? cellValue('A', it.ai, cmp[a]) : '');
@@ -1356,11 +1484,28 @@ function bind(){
     });
   });
 
-  $('keySel').addEventListener('change', function(){
+  $('keySelA').addEventListener('change', function(){
     var v = parseInt(this.value, 10);
-    state.keyIndex = isNaN(v) ? 0 : v;
-    state.cmpIndexes = state.cmpIndexes.filter(function(i){ return i !== state.keyIndex; });
-    rebuildColumnUI();
+    state.keyIndexA = isNaN(v) ? 0 : v;
+    if (state.linkKey){
+      state.keyIndexB = state.keyIndexA;
+      $('keySelB').value = String(state.keyIndexB);
+    }
+    state.cmpIndexes = state.cmpIndexes.filter(function(i){
+      return i !== state.keyIndexA && i !== state.keyIndexB;
+    });
+    rebuildChips();
+    analyze();
+  });
+
+  $('keySelB').addEventListener('change', function(){
+    var v = parseInt(this.value, 10);
+    state.keyIndexB = isNaN(v) ? 0 : v;
+    state.linkKey = (state.keyIndexB === state.keyIndexA);
+    state.cmpIndexes = state.cmpIndexes.filter(function(i){
+      return i !== state.keyIndexA && i !== state.keyIndexB;
+    });
+    rebuildChips();
     analyze();
   });
 
@@ -1430,6 +1575,19 @@ function bind(){
     state.filter = tab.dataset.filter;
     renderStats();
     renderTable();
+  });
+
+  $('tableWrap').addEventListener('click', function(e){
+    var tr = e.target.closest('tr[data-idx]');
+    if (!tr) return;
+    var idx = parseInt(tr.getAttribute('data-idx'), 10);
+    if (isNaN(idx)) return;
+    state.expanded = (state.expanded === idx) ? -1 : idx;
+    renderTable();
+    if (state.expanded >= 0 && document.querySelector){
+      var el = document.querySelector('tr[data-idx="' + idx + '"]');
+      if (el && el.scrollIntoView) el.scrollIntoView({ block: 'nearest' });
+    }
   });
 
   document.querySelectorAll('[data-act]').forEach(function(btn){
@@ -1543,7 +1701,9 @@ function saveDraft(){
     localStorage.setItem(DRAFT_KEY, JSON.stringify({
       a: $('inputA').value,
       b: $('inputB').value,
-      k: state.keyIndex,
+      ka: state.keyIndexA,
+      kb: state.keyIndexB,
+      lk: state.linkKey,
       c: state.cmpIndexes,
       m: state.matchMode,
       t: state.tolerance,
@@ -1562,7 +1722,9 @@ function loadDraft(){
 
     if (d.a) $('inputA').value = d.a;
     if (d.b) $('inputB').value = d.b;
-    if (typeof d.k === 'number') state.keyIndex = d.k;
+    if (typeof d.ka === 'number') state.keyIndexA = d.ka;
+    if (typeof d.kb === 'number') state.keyIndexB = d.kb;
+    if (typeof d.lk === 'boolean') state.linkKey = d.lk;
     if (Object.prototype.toString.call(d.c) === '[object Array]') state.cmpIndexes = d.c;
     if (d.m === 'fuzzy' || d.m === 'exact') state.matchMode = d.m;
     if (typeof d.t === 'number') state.tolerance = d.t;
