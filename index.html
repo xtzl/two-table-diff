@@ -7,6 +7,7 @@
 <title>两表差异比对</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
+[hidden]{display:none !important}
 :root{
   --bg:#F4F6FA;--card:#fff;--line:#E3E7EF;--line2:#EEF1F6;
   --txt:#161D2E;--muted:#6B7590;--brand:#2F5597;--brand2:#4472C4;
@@ -74,11 +75,18 @@ select:focus{border-color:#A9BFE8;box-shadow:0 0 0 3px rgba(47,85,151,.08)}
 .chip:hover{border-color:#C3CEE3;color:var(--txt)}
 .chip.on{background:#EEF3FC;border-color:#A9BFE8;color:var(--brand);font-weight:500}
 .hint{font-size:12px;color:#A8B1C4}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff;height:31px}
+.seg button{border:0;border-radius:0;padding:0 15px;font-size:12.5px;background:transparent;color:var(--muted);height:100%;line-height:31px}
+.seg button:hover{background:#F7F9FC;border:0}
+.seg button.on{background:var(--brand);color:#fff;font-weight:500}
+.seg button.on:hover{background:#274880}
+.seg button + button{border-left:1px solid var(--line)}
+.seg button.on + button{border-left-color:var(--brand)}
 .autonote{flex-basis:100%;font-size:11.5px;color:#98A2B3;line-height:1.65;margin:-4px 0 0}
 .autonote code{font-family:ui-monospace,Consolas,monospace;font-size:11px;background:#F4F6FA;padding:1px 5px;border-radius:4px;border:1px solid var(--line2);color:#667085}
 
 /* ---------- stats ---------- */
-.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:18px}
+.stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-top:18px}
 .stat{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--line);border-radius:var(--r);padding:12px 14px;cursor:pointer;transition:.14s;user-select:none}
 .stat:hover{border-color:#C3CEE3;border-left-color:inherit;transform:translateY(-1px)}
 .stat.on{background:#F7F9FD;box-shadow:0 0 0 3px rgba(47,85,151,.08);border-color:#A9BFE8}
@@ -86,17 +94,22 @@ select:focus{border-color:#A9BFE8;box-shadow:0 0 0 3px rgba(47,85,151,.08)}
 .stat.blue{border-left-color:var(--blue)}
 .stat.amber{border-left-color:#DC6803}
 .stat.green{border-left-color:#12B76A}
+.stat.purple{border-left-color:#7F56D9}
 .stat-v{font-size:25px;font-weight:600;line-height:1.1;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
 .stat.red .stat-v{color:var(--red)}
 .stat.blue .stat-v{color:var(--blue)}
 .stat.amber .stat-v{color:var(--amber)}
 .stat.green .stat-v{color:var(--green)}
+.stat.purple .stat-v{color:#6941C6}
 .stat-k{font-size:12px;color:var(--muted);margin-top:3px}
 
 /* ---------- warnings ---------- */
 .warn{background:var(--amber-bg);border:1px solid #FEDF89;color:var(--amber);border-radius:8px;padding:9px 12px;font-size:12.5px;margin-top:12px;line-height:1.55}
 .warn b{font-weight:600}
 .warn code{font-family:ui-monospace,Consolas,monospace;font-size:11.5px;background:#fff;padding:1px 5px;border-radius:4px;border:1px solid #FEDF89}
+.info{background:#EFF8FF;border:1px solid #B2DDFF;color:#175CD3;border-radius:8px;padding:9px 12px;font-size:12.5px;margin-top:12px;line-height:1.55}
+.info b{font-weight:600}
+.info code{font-family:ui-monospace,Consolas,monospace;font-size:11.5px;background:#fff;padding:1px 5px;border-radius:4px;border:1px solid #B2DDFF}
 
 /* ---------- toolbar ---------- */
 .toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:16px 0 10px;flex-wrap:wrap}
@@ -121,12 +134,14 @@ td.rowno{color:#A8B1C4;font-variant-numeric:tabular-nums;font-size:11.5px}
 .tag.onlyB{background:var(--blue-bg);color:var(--blue)}
 .tag.diff{background:var(--amber-bg);color:var(--amber)}
 .tag.same{background:var(--green-bg);color:var(--green)}
+.tag.fuzzy{background:#F4F3FF;color:#6941C6}
 .dup{display:inline-block;margin-left:4px;font-size:10px;padding:1px 4px;border-radius:3px;background:#F2F4F7;color:#667085;border:1px solid #E4E7EC}
 .muted{color:#98A2B3}
 .cellv{color:#475467}
 .was{color:#98A2B3;text-decoration:line-through;text-decoration-color:#D0D5DD}
 .arw{color:#C3CEE3;margin:0 5px;font-size:11px}
 .now{color:var(--red);font-weight:600}
+.pnow{color:#6941C6;font-weight:600}
 .empty{padding:64px 20px;text-align:center;color:var(--muted);font-size:13px;line-height:1.8}
 .empty svg{display:block;margin:0 auto 12px;opacity:.5}
 .trunc{padding:10px 12px;font-size:12px;color:var(--amber);background:var(--amber-bg);border-radius:0 0 var(--r) var(--r)}
@@ -213,6 +228,25 @@ td.rowno{color:#A8B1C4;font-variant-numeric:tabular-nums;font-size:11.5px}
     <div class="field">
       <label for="keySel">比对键（用哪一列认「同一条」）</label>
       <select id="keySel"><option value="0">第 1 列</option></select>
+    </div>
+    <div class="field">
+      <label>匹配模式</label>
+      <div class="seg" id="modeSeg">
+        <button type="button" data-mode="exact" class="on">精确</button>
+        <button type="button" data-mode="fuzzy">模糊</button>
+      </div>
+    </div>
+    <div class="field" id="tolField" hidden>
+      <label for="tolSel">允许误差</label>
+      <select id="tolSel">
+        <option value="1">±1 秒</option>
+        <option value="2">±2 秒</option>
+        <option value="3">±3 秒</option>
+        <option value="5" selected>±5 秒</option>
+        <option value="10">±10 秒</option>
+        <option value="30">±30 秒</option>
+        <option value="60">±1 分钟</option>
+      </select>
     </div>
     <div class="field grow">
       <label>同时比对这几列的值（可多选，用来抓「单号相同但金额不同」）</label>
@@ -491,13 +525,15 @@ var state = {
   cmpIndexes: [],
   delim: 'auto',
   ignoreCase: true,
+  matchMode: 'exact',
+  tolerance: 5,
   filter: 'all',
   result: null,
   cmpTouched: false,
   colSig: ''
 };
 
-var TAGS = { onlyA: '只在表A', onlyB: '只在表B', diff: '值不同', same: '一致' };
+var TAGS = { onlyA: '只在表A', onlyB: '只在表B', diff: '值不同', same: '一致', fuzzy: '近似' };
 
 var SAMPLE_A =
   '单号\t会员卡号\t消费日期\t金额\t门店\n' +
@@ -664,6 +700,71 @@ function buildIndex(rows, ki){
   return map;
 }
 
+/* 归一化后的时间串转秒（UTC，避免时区干扰） */
+var SEC_RE = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})$/;
+function dtToSec(s){
+  var m = SEC_RE.exec(s);
+  if (!m) return null;
+  return Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]) / 1000;
+}
+
+function lowerBound(arr, v){
+  var lo = 0, hi = arr.length;
+  while (lo < hi){
+    var mid = (lo + hi) >> 1;
+    if (arr[mid].t < v) lo = mid + 1;
+    else hi = mid;
+  }
+  return lo;
+}
+
+var MAX_PAIRS = 120000;
+
+/* 模糊配对：在容差内做一对一贪心，优先配对时间差最小的。
+   先按差值升序排全部候选对，再依次认领，保证不会出现一条 A 被多条 B 抢走的错配。 */
+function fuzzyPair(rowsA, rowsB, ki, aList, bList, tol){
+  var as = [], bs = [], i, t;
+  for (i = 0; i < aList.length; i++){
+    t = dtToSec(normKey(rowsA[aList[i]][ki], false));
+    if (t !== null) as.push({ i: aList[i], t: t });
+  }
+  for (i = 0; i < bList.length; i++){
+    t = dtToSec(normKey(rowsB[bList[i]][ki], false));
+    if (t !== null) bs.push({ i: bList[i], t: t });
+  }
+  if (!as.length || !bs.length) return [];
+
+  as.sort(function(x, y){ return x.t - y.t; });
+  bs.sort(function(x, y){ return x.t - y.t; });
+
+  var cand = [], overflow = false;
+  for (var x = 0; x < bs.length && !overflow; x++){
+    var lo = lowerBound(as, bs[x].t - tol);
+    for (var y = lo; y < as.length; y++){
+      if (as[y].t > bs[x].t + tol) break;
+      cand.push({ a: as[y].i, b: bs[x].i, d: Math.abs(as[y].t - bs[x].t) });
+      if (cand.length >= MAX_PAIRS) { overflow = true; break; }
+    }
+  }
+  if (!cand.length) return [];
+
+  cand.sort(function(p, q){
+    if (p.d !== q.d) return p.d - q.d;
+    if (p.a !== q.a) return p.a - q.a;
+    return p.b - q.b;
+  });
+
+  var usedA = {}, usedB = {}, out = [];
+  for (var c = 0; c < cand.length; c++){
+    var pr = cand[c];
+    if (usedA[pr.a] || usedB[pr.b]) continue;
+    usedA[pr.a] = 1;
+    usedB[pr.b] = 1;
+    out.push(pr);
+  }
+  return out;
+}
+
 function analyze(){
   var A = state.A, B = state.B;
 
@@ -689,55 +790,7 @@ function analyze(){
   idxA.forEach(function(v, k){ if (v.length > 1) dupA.push({ key: k, count: v.length }); });
   idxB.forEach(function(v, k){ if (v.length > 1) dupB.push({ key: k, count: v.length }); });
 
-  var items = [];
-  var matched = new Set();
-
-  idxA.forEach(function(aIdxs, k){
-    var bIdxs = idxB.get(k);
-    if (!bIdxs){
-      for (var t = 0; t < aIdxs.length; t++){
-        items.push({
-          type: 'onlyA',
-          key: displayKey(A.rows[aIdxs[t]], ki),
-          ai: aIdxs[t], bi: -1, diffs: [],
-          dup: aIdxs.length > 1
-        });
-      }
-      return;
-    }
-    matched.add(k);
-    var ai = aIdxs[0], bi = bIdxs[0];
-    var diffs = [];
-    for (var d = 0; d < cmp.length; d++){
-      if (!valuesEqual(A.rows[ai][cmp[d]], B.rows[bi][cmp[d]], state.ignoreCase)) diffs.push(cmp[d]);
-    }
-    items.push({
-      type: diffs.length ? 'diff' : 'same',
-      key: displayKey(A.rows[ai], ki),
-      ai: ai, bi: bi, diffs: diffs,
-      dup: aIdxs.length > 1 || bIdxs.length > 1
-    });
-  });
-
-  idxB.forEach(function(bIdxs, k){
-    if (matched.has(k)) return;
-    for (var t = 0; t < bIdxs.length; t++){
-      items.push({
-        type: 'onlyB',
-        key: displayKey(B.rows[bIdxs[t]], ki),
-        ai: -1, bi: bIdxs[t], diffs: [],
-        dup: bIdxs.length > 1
-      });
-    }
-  });
-
-  var counts = { onlyA: 0, onlyB: 0, diff: 0, same: 0 };
-  for (var i = 0; i < items.length; i++) counts[items[i].type]++;
-
-  var validA = 0, validB = 0;
-  idxA.forEach(function(v){ validA += v.length; });
-  idxB.forEach(function(v){ validB += v.length; });
-
+  /* 是否时间类数据，决定模糊匹配是否可用 */
   var tHit = 0, tAll = 0;
   idxA.forEach(function(v, k){
     if (tAll >= 200) return;
@@ -746,9 +799,98 @@ function analyze(){
   });
   var timeLike = tAll > 0 && tHit / tAll >= 0.6;
 
+  /* ① 精确匹配 */
+  var pairs = [];
+  var pendingA = [];
+  var pendingB = [];
+
+  idxA.forEach(function(aIdxs, k){
+    var bIdxs = idxB.get(k);
+    if (!bIdxs){
+      for (var t = 0; t < aIdxs.length; t++) pendingA.push(aIdxs[t]);
+      return;
+    }
+    pairs.push({
+      ai: aIdxs[0], bi: bIdxs[0], delta: 0,
+      dup: aIdxs.length > 1 || bIdxs.length > 1
+    });
+    for (var r = 1; r < aIdxs.length; r++) pendingA.push(aIdxs[r]);
+    for (var s = 1; s < bIdxs.length; s++) pendingB.push(bIdxs[s]);
+  });
+
+  idxB.forEach(function(bIdxs, k){
+    if (idxA.has(k)) return;
+    for (var t = 0; t < bIdxs.length; t++) pendingB.push(bIdxs[t]);
+  });
+
+  /* ② 模糊配对：只处理精确匹配剩下的，且仅时间类数据 */
+  var tol = (state.matchMode === 'fuzzy') ? state.tolerance : 0;
+  var fuzzyAdded = 0;
+
+  if (tol > 0 && timeLike && pendingA.length && pendingB.length){
+    var fp = fuzzyPair(A.rows, B.rows, ki, pendingA, pendingB, tol);
+    if (fp.length){
+      var usedA = {}, usedB = {};
+      for (var f = 0; f < fp.length; f++){
+        usedA[fp[f].a] = 1;
+        usedB[fp[f].b] = 1;
+        pairs.push({ ai: fp[f].a, bi: fp[f].b, delta: fp[f].d, dup: false });
+      }
+      fuzzyAdded = fp.length;
+      pendingA = pendingA.filter(function(i){ return !usedA[i]; });
+      pendingB = pendingB.filter(function(j){ return !usedB[j]; });
+    }
+  }
+
+  /* ③ 组装结果行 */
+  var items = [];
+  var m, d2;
+
+  pairs.sort(function(x, y){ return x.ai - y.ai; });
+  for (m = 0; m < pairs.length; m++){
+    var pr = pairs[m];
+    var diffs = [];
+    for (d2 = 0; d2 < cmp.length; d2++){
+      if (!valuesEqual(A.rows[pr.ai][cmp[d2]], B.rows[pr.bi][cmp[d2]], state.ignoreCase)) diffs.push(cmp[d2]);
+    }
+    var type = pr.delta > 0 ? 'fuzzy' : (diffs.length ? 'diff' : 'same');
+    items.push({
+      type: type,
+      key: displayKey(A.rows[pr.ai], ki),
+      ai: pr.ai, bi: pr.bi, diffs: diffs, delta: pr.delta,
+      dup: pr.dup
+    });
+  }
+
+  pendingA.sort(function(x, y){ return x - y; });
+  for (m = 0; m < pendingA.length; m++){
+    items.push({
+      type: 'onlyA',
+      key: displayKey(A.rows[pendingA[m]], ki),
+      ai: pendingA[m], bi: -1, diffs: [], delta: 0, dup: false
+    });
+  }
+
+  pendingB.sort(function(x, y){ return x - y; });
+  for (m = 0; m < pendingB.length; m++){
+    items.push({
+      type: 'onlyB',
+      key: displayKey(B.rows[pendingB[m]], ki),
+      ai: -1, bi: pendingB[m], diffs: [], delta: 0, dup: false
+    });
+  }
+
+  var counts = { onlyA: 0, onlyB: 0, diff: 0, same: 0, fuzzy: 0 };
+  for (m = 0; m < items.length; m++) counts[items[m].type]++;
+
+  var validA = 0, validB = 0;
+  idxA.forEach(function(v){ validA += v.length; });
+  idxB.forEach(function(v){ validB += v.length; });
+
   state.result = {
     items: items, counts: counts, cmp: cmp,
     dupA: dupA, dupB: dupB, timeLike: timeLike,
+    fuzzyAdded: fuzzyAdded,
     skipped: (A.rows.length - validA) + (B.rows.length - validB)
   };
 
@@ -767,11 +909,12 @@ function displayKey(row, ki){
    ============================================================ */
 function renderStats(){
   var r = state.result;
-  var counts = r ? r.counts : { onlyA: 0, onlyB: 0, diff: 0, same: 0 };
+  var counts = r ? r.counts : { onlyA: 0, onlyB: 0, diff: 0, same: 0, fuzzy: 0 };
   var defs = [
     { k: 'onlyA', label: '只在表 A', cls: 'red' },
     { k: 'onlyB', label: '只在表 B', cls: 'blue' },
     { k: 'diff', label: '值不同', cls: 'amber' },
+    { k: 'fuzzy', label: '近似一致', cls: 'purple' },
     { k: 'same', label: '完全一致', cls: 'green' }
   ];
   var html = '';
@@ -790,29 +933,40 @@ function renderWarnings(){
   var r = state.result;
   if (!r){ box.innerHTML = ''; return; }
 
-  var msgs = [];
+  var out = [];
+
+  if (state.matchMode === 'fuzzy'){
+    if (!r.timeLike){
+      out.push({ cls: 'info', text: '当前比对键不是时间类数据，<b>模糊匹配未生效</b>——模糊模式只对时间戳有意义，其他类型会自动按精确比对。' });
+    } else if (r.fuzzyAdded > 0){
+      out.push({ cls: 'info', text: '<b>模糊匹配已启用</b>：允许 ±' + state.tolerance + ' 秒误差，额外配对 <b>' + r.fuzzyAdded + '</b> 条。这些记录标为「近似」，建议抽查确认后再采信。' });
+    } else {
+      out.push({ cls: 'info', text: '模糊匹配已启用（±' + state.tolerance + ' 秒），但没有找到容差内可配对的记录，说明剩余差异超出这个范围。' });
+    }
+  }
+
   if (r.dupA.length){
     var tailA = r.timeLike
       ? '时间戳类数据同一时刻有多条记录属正常，只是无法逐条一一对应，会取第一条配对。'
       : '同一键出现多行时只拿第一条去比对，若单号本身不唯一，建议改用「组合键」。';
-    msgs.push('<b>表 A 有 ' + r.dupA.length + ' 个键重复出现</b>（例如 ' +
+    out.push({ cls: 'warn', text: '<b>表 A 有 ' + r.dupA.length + ' 个键重复出现</b>（例如 ' +
       r.dupA.slice(0, 3).map(function(d){ return '<code>' + esc(d.key) + '</code> ×' + d.count; }).join('、') +
-      '）。' + tailA);
+      '）。' + tailA });
   }
   if (r.dupB.length){
-    msgs.push('<b>表 B 有 ' + r.dupB.length + ' 个键重复出现</b>（例如 ' +
-      r.dupB.slice(0, 3).map(function(d){ return '<code>' + esc(d.key) + '</code> ×' + d.count; }).join('、') + '）。');
+    out.push({ cls: 'warn', text: '<b>表 B 有 ' + r.dupB.length + ' 个键重复出现</b>（例如 ' +
+      r.dupB.slice(0, 3).map(function(d){ return '<code>' + esc(d.key) + '</code> ×' + d.count; }).join('、') + '）。' });
   }
   if (r.skipped > 0){
-    msgs.push('有 <b>' + r.skipped + '</b> 行的比对键为空，已跳过（无法参与比对）。');
+    out.push({ cls: 'warn', text: '有 <b>' + r.skipped + '</b> 行的比对键为空，已跳过（无法参与比对）。' });
   }
   if (state.A && state.B && state.A.width !== state.B.width){
-    msgs.push('两张表的列数不同（表A ' + state.A.width + ' 列 / 表B ' + state.B.width + ' 列），超出部分的列不参与比对。');
+    out.push({ cls: 'warn', text: '两张表的列数不同（表A ' + state.A.width + ' 列 / 表B ' + state.B.width + ' 列），超出部分的列不参与比对。' });
   }
 
-  if (!msgs.length){ box.innerHTML = ''; return; }
+  if (!out.length){ box.innerHTML = ''; return; }
   var html = '';
-  for (var i = 0; i < msgs.length; i++) html += '<div class="warn">' + msgs[i] + '</div>';
+  for (var i = 0; i < out.length; i++) html += '<div class="' + out[i].cls + '">' + out[i].text + '</div>';
   box.innerHTML = html;
 }
 
@@ -870,16 +1024,23 @@ function renderTable(){
 
   for (var t = 0; t < shown.length; t++){
     var it = shown[t];
+    var tagText = it.type === 'fuzzy' ? ('近似 ' + it.delta + 's') : TAGS[it.type];
     html += '<tr>';
-    html += '<td><span class="tag ' + it.type + '">' + TAGS[it.type] + '</span>' +
+    html += '<td><span class="tag ' + it.type + '">' + tagText + '</span>' +
             (it.dup ? '<span class="dup" title="该键在表中出现多次">重复</span>' : '') + '</td>';
-    html += '<td class="key">' + esc(it.key) + '</td>';
+
+    if (it.type === 'fuzzy' && it.bi >= 0){
+      var bKey = displayKey(state.B.rows[it.bi], state.keyIndex);
+      html += '<td class="key"><span class="was">' + esc(it.key) + '</span><span class="arw">→</span><span class="pnow">' + esc(bKey) + '</span></td>';
+    } else {
+      html += '<td class="key">' + esc(it.key) + '</td>';
+    }
 
     for (var m = 0; m < cmp.length; m++){
       var ci = cmp[m];
       var av = it.ai >= 0 ? cellValue('A', it.ai, ci) : '';
       var bv = it.bi >= 0 ? cellValue('B', it.bi, ci) : '';
-      if (it.type === 'diff' && it.diffs.indexOf(ci) >= 0){
+      if ((it.type === 'diff' || it.type === 'fuzzy') && it.diffs.indexOf(ci) >= 0){
         html += '<td><span class="was">' + esc(av) + '</span><span class="arw">→</span><span class="now">' + esc(bv) + '</span></td>';
       } else if (it.type === 'onlyA'){
         html += '<td class="cellv">' + esc(av) + '</td>';
@@ -912,13 +1073,14 @@ function keyColumnLabel(){
 
 function renderTabs(){
   var r = state.result;
-  var counts = r ? r.counts : { onlyA: 0, onlyB: 0, diff: 0, same: 0 };
+  var counts = r ? r.counts : { onlyA: 0, onlyB: 0, diff: 0, same: 0, fuzzy: 0 };
   var total = r ? r.items.length : 0;
   var defs = [
     { k: 'all', label: '全部', n: total },
     { k: 'onlyA', label: '只在表A', n: counts.onlyA },
     { k: 'onlyB', label: '只在表B', n: counts.onlyB },
     { k: 'diff', label: '值不同', n: counts.diff },
+    { k: 'fuzzy', label: '近似', n: counts.fuzzy },
     { k: 'same', label: '一致', n: counts.same }
   ];
   var html = '';
@@ -962,7 +1124,12 @@ function buildMatrix(){
 
   for (var t = 0; t < rows.length; t++){
     var it = rows[t];
-    var line = [TAGS[it.type], it.key];
+    var typeText = it.type === 'fuzzy' ? ('近似 ' + it.delta + 's') : TAGS[it.type];
+    var keyCell = it.key;
+    if (it.type === 'fuzzy' && it.bi >= 0){
+      keyCell = it.key + ' -> ' + displayKey(state.B.rows[it.bi], state.keyIndex);
+    }
+    var line = [typeText, keyCell];
     for (var a = 0; a < cmp.length; a++) line.push(it.ai >= 0 ? cellValue('A', it.ai, cmp[a]) : '');
     for (var b = 0; b < cmp.length; b++) line.push(it.bi >= 0 ? cellValue('B', it.bi, cmp[b]) : '');
     line.push(it.ai >= 0 ? state.A.lineNos[it.ai] : '');
@@ -1114,6 +1281,24 @@ function bind(){
     state.keyIndex = isNaN(v) ? 0 : v;
     state.cmpIndexes = state.cmpIndexes.filter(function(i){ return i !== state.keyIndex; });
     rebuildColumnUI();
+    analyze();
+  });
+
+  $('modeSeg').addEventListener('click', function(e){
+    var btn = e.target.closest('button[data-mode]');
+    if (!btn) return;
+    state.matchMode = btn.dataset.mode;
+    var btns = this.querySelectorAll('button');
+    for (var i = 0; i < btns.length; i++){
+      btns[i].classList.toggle('on', btns[i] === btn);
+    }
+    $('tolField').hidden = (state.matchMode !== 'fuzzy');
+    analyze();
+  });
+
+  $('tolSel').addEventListener('change', function(){
+    var v = parseInt(this.value, 10);
+    state.tolerance = (isNaN(v) || v <= 0) ? 5 : v;
     analyze();
   });
 
