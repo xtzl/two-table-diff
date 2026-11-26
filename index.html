@@ -30,6 +30,14 @@ body{
 .hdr h1{font-size:19px;font-weight:600;letter-spacing:-.01em}
 .hdr p{font-size:12.5px;color:var(--muted);margin-top:2px}
 .privacy{font-size:12px;color:var(--muted);background:#fff;border:1px solid var(--line);padding:5px 11px;border-radius:20px;display:flex;align-items:center;gap:5px}
+.hdr-r{display:flex;align-items:center;gap:10px}
+.ver{font-size:11.5px;color:#667085;font-family:ui-monospace,Consolas,monospace;background:#fff;border:1px solid var(--line);padding:4px 10px;border-radius:20px;font-variant-numeric:tabular-nums;white-space:nowrap;cursor:default;letter-spacing:.02em}
+.upd{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:99;background:#175CD3;color:#fff;padding:8px 10px 8px 16px;border-radius:10px;font-size:13px;display:flex;gap:12px;align-items:center;box-shadow:0 10px 30px rgba(23,92,211,.3);max-width:calc(100vw - 28px)}
+.upd b{font-weight:600}
+.upd button{background:#fff;color:#175CD3;border:0;padding:5px 13px;font-size:12.5px;font-weight:600;border-radius:7px;white-space:nowrap}
+.upd button:hover{background:#EFF8FF}
+.upd button.upd-x{background:transparent;color:#fff;opacity:.65;padding:2px 7px;font-size:17px;font-weight:400;line-height:1;border-radius:5px}
+.upd button.upd-x:hover{opacity:1;background:rgba(255,255,255,.16)}
 
 /* ---------- panes ---------- */
 .panes{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
@@ -167,6 +175,12 @@ td.rowno{color:#A8B1C4;font-variant-numeric:tabular-nums;font-size:11.5px}
 <body>
 <h2 class="sr-only">两表差异比对工具：粘贴两张表的数据，自动找出单号缺失与金额不一致的记录</h2>
 
+<div class="upd" id="updBar" hidden>
+  <span>有新版本 <b id="updVer"></b> 可用，当前是 <b id="curVer"></b></span>
+  <button type="button" id="updBtn">立即刷新</button>
+  <button type="button" class="upd-x" id="updClose" aria-label="忽略">×</button>
+</div>
+
 <div class="app">
 
   <header class="hdr">
@@ -183,11 +197,14 @@ td.rowno{color:#A8B1C4;font-variant-numeric:tabular-nums;font-size:11.5px}
         <p>左边粘表 A，右边粘表 B，自动找出单号缺失、金额对不上的记录</p>
       </div>
     </div>
-    <div class="privacy">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="4" y="10.5" width="16" height="10" rx="2"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/>
-      </svg>
-      纯浏览器本地运行 · 数据不上传
+    <div class="hdr-r">
+      <div class="privacy">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="4" y="10.5" width="16" height="10" rx="2"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/>
+        </svg>
+        纯浏览器本地运行 · 数据不上传
+      </div>
+      <span class="ver" id="verTag">v1.0.0</span>
     </div>
   </header>
 
@@ -289,6 +306,12 @@ td.rowno{color:#A8B1C4;font-variant-numeric:tabular-nums;font-size:11.5px}
 <script>
 (function(){
 'use strict';
+
+/* ============================================================
+   版本信息 —— 发版时由 release.js 自动写入，不要手改
+   ============================================================ */
+var APP_VERSION = 'v1.3.0';
+var BUILD_TIME = '2026-11-27 00:47';
 
 /* ============================================================
    工具函数
@@ -1390,6 +1413,14 @@ function bind(){
     toast('已导出 ' + (currentRows().length) + ' 条');
   });
 
+  $('updBtn').addEventListener('click', function(){
+    location.href = location.pathname + '?v=' + Date.now();
+  });
+
+  $('updClose').addEventListener('click', function(){
+    $('updBar').hidden = true;
+  });
+
   /* 拖入文件 */
   ['A', 'B'].forEach(function(side){
     var ta = $('input' + side);
@@ -1419,6 +1450,34 @@ function bind(){
       reader.readAsText(f, 'UTF-8');
     });
   });
+}
+
+/* ============================================================
+   版本显示与更新检测
+   ============================================================ */
+function initVersion(){
+  var tag = $('verTag');
+  tag.textContent = APP_VERSION;
+  tag.title = '构建于 ' + BUILD_TIME;
+  $('curVer').textContent = APP_VERSION;
+}
+
+/* 静默拉一次线上 HTML，比对里面的 APP_VERSION；
+   版本不一致说明线上已更新，而当前页面还是旧的（多半是浏览器缓存）。 */
+function checkUpdate(){
+  if (!/^https?:$/.test(location.protocol)) return;
+  var url = location.pathname + '?_=' + Date.now();
+  fetch(url, { cache: 'no-store' })
+    .then(function(r){ return r.ok ? r.text() : ''; })
+    .then(function(html){
+      if (!html) return;
+      var m = html.match(/APP_VERSION\s*=\s*['"]([^'"]+)['"]/);
+      if (m && m[1] && m[1] !== APP_VERSION){
+        $('updVer').textContent = m[1];
+        $('updBar').hidden = false;
+      }
+    })
+    .catch(function(){});
 }
 
 /* 供自动化测试与调试使用，不影响页面功能 */
@@ -1451,6 +1510,8 @@ function setPlaceholders(){
 setPlaceholders();
 bind();
 recompute();
+initVersion();
+setTimeout(checkUpdate, 2500);
 
 })();
 </script>
