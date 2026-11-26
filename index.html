@@ -121,12 +121,23 @@ select:focus{border-color:#A9BFE8;box-shadow:0 0 0 3px rgba(47,85,151,.08)}
 
 /* ---------- toolbar ---------- */
 .toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:16px 0 10px;flex-wrap:wrap}
+.tb-left{display:flex;align-items:center;gap:14px;flex-wrap:wrap;min-width:0}
+.perf{font-size:11.5px;color:#A8B1C4;font-variant-numeric:tabular-nums;white-space:nowrap}
 .tabs{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .tab{font-size:12.5px;padding:5px 11px;border-radius:7px;border:1px solid transparent;background:none;color:var(--muted);cursor:pointer;font-family:inherit}
 .tab:hover{background:#EAEEF6;color:var(--txt)}
 .tab.on{background:#fff;border-color:var(--line);color:var(--txt);font-weight:500;box-shadow:0 1px 2px rgba(16,24,40,.04)}
 .count{font-size:12px;color:var(--muted);margin-left:4px;font-variant-numeric:tabular-nums}
-.actions{display:flex;gap:8px}
+.actions{display:flex;gap:8px;align-items:center}
+.search{position:relative;display:flex;align-items:center}
+.search input{width:176px;padding:7px 10px 7px 30px;border:1px solid var(--line);border-radius:8px;font-size:13px;font-family:inherit;outline:0;background:#fff;color:var(--txt)}
+.search input:focus{border-color:#A9BFE8;box-shadow:0 0 0 3px rgba(47,85,151,.08)}
+.search input::-webkit-search-cancel-button{cursor:pointer}
+.search svg{position:absolute;left:10px;color:#98A2B3;pointer-events:none}
+.tol-wrap{display:flex;align-items:center;gap:7px}
+.tol-wrap input{width:78px;padding:6px 8px;border:1px solid var(--line);border-radius:7px;font-size:13px;font-family:ui-monospace,Consolas,monospace;text-align:center;outline:0;color:var(--txt);background:#fff}
+.tol-wrap input:focus{border-color:#A9BFE8;box-shadow:0 0 0 3px rgba(47,85,151,.08)}
+.tol-unit{font-size:12.5px;color:var(--muted)}
 
 /* ---------- table ---------- */
 .table-wrap{background:var(--card);border:1px solid var(--line);border-radius:var(--r);overflow:auto;max-height:min(60vh,620px)}
@@ -150,6 +161,7 @@ td.rowno{color:#A8B1C4;font-variant-numeric:tabular-nums;font-size:11.5px}
 .arw{color:#C3CEE3;margin:0 5px;font-size:11px}
 .now{color:var(--red);font-weight:600}
 .pnow{color:#6941C6;font-weight:600}
+.hl{display:inline-block;background:#FEF0C7;color:#93370D;border-radius:2px;padding:0 1px}
 .empty{padding:64px 20px;text-align:center;color:var(--muted);font-size:13px;line-height:1.8}
 .empty svg{display:block;margin:0 auto 12px;opacity:.5}
 .trunc{padding:10px 12px;font-size:12px;color:var(--amber);background:var(--amber-bg);border-radius:0 0 var(--r) var(--r)}
@@ -246,7 +258,7 @@ td.rowno{color:#A8B1C4;font-variant-numeric:tabular-nums;font-size:11.5px}
       <label for="keySel">比对键（用哪一列认「同一条」）</label>
       <select id="keySel"><option value="0">第 1 列</option></select>
     </div>
-    <div class="field">
+    <div class="field" id="modeField" hidden>
       <label>匹配模式</label>
       <div class="seg" id="modeSeg">
         <button type="button" data-mode="exact" class="on">精确</button>
@@ -254,16 +266,11 @@ td.rowno{color:#A8B1C4;font-variant-numeric:tabular-nums;font-size:11.5px}
       </div>
     </div>
     <div class="field" id="tolField" hidden>
-      <label for="tolSel">允许误差</label>
-      <select id="tolSel">
-        <option value="1">±1 秒</option>
-        <option value="2">±2 秒</option>
-        <option value="3">±3 秒</option>
-        <option value="5" selected>±5 秒</option>
-        <option value="10">±10 秒</option>
-        <option value="30">±30 秒</option>
-        <option value="60">±1 分钟</option>
-      </select>
+      <label for="tolInput">允许误差（秒）</label>
+      <div class="tol-wrap">
+        <input type="number" id="tolInput" min="1" max="3600" step="1" value="5" inputmode="numeric">
+        <span class="tol-unit">秒</span>
+      </div>
     </div>
     <div class="field grow">
       <label>同时比对这几列的值（可多选，用来抓「单号相同但金额不同」）</label>
@@ -284,7 +291,7 @@ td.rowno{color:#A8B1C4;font-variant-numeric:tabular-nums;font-size:11.5px}
       <label>选项</label>
       <label class="chk"><input type="checkbox" id="ignoreCase" checked> 忽略大小写</label>
     </div>
-    <p class="autonote">自动处理：清洗首尾的反引号 / 引号 / 逗号等符号，并把 <code>2026/9/10 8:37:15</code> 与 <code>2026-09-10 08:37:15</code> 视为同一时刻</p>
+    <p class="autonote">自动处理：清洗首尾的反引号 / 引号 / 逗号等符号，并把 <code>2026/9/10 8:37:15</code> 与 <code>2026-09-10 08:37:15</code> 视为同一时刻　·　粘贴的内容会自动存到本机浏览器，不会上传</p>
   </section>
 
   <section id="warnBox"></section>
@@ -292,8 +299,17 @@ td.rowno{color:#A8B1C4;font-variant-numeric:tabular-nums;font-size:11.5px}
   <section class="stats" id="stats"></section>
 
   <div class="toolbar">
-    <div class="tabs" id="tabs"></div>
+    <div class="tb-left">
+      <div class="tabs" id="tabs"></div>
+      <span class="perf" id="perf"></span>
+    </div>
     <div class="actions">
+      <div class="search">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+          <circle cx="11" cy="11" r="7"/><path d="M16.5 16.5L21 21"/>
+        </svg>
+        <input type="search" id="qInput" placeholder="搜索结果…" autocomplete="off">
+      </div>
       <button type="button" id="btnCopy">复制清单</button>
       <button type="button" class="primary" id="btnCsv">导出 CSV</button>
     </div>
@@ -310,8 +326,8 @@ td.rowno{color:#A8B1C4;font-variant-numeric:tabular-nums;font-size:11.5px}
 /* ============================================================
    版本信息 —— 发版时由 release.js 自动写入，不要手改
    ============================================================ */
-var APP_VERSION = 'v1.3.0';
-var BUILD_TIME = '2026-11-27 00:47';
+var APP_VERSION = 'v1.4.0';
+var BUILD_TIME = '2026-11-27 00:54';
 
 /* ============================================================
    工具函数
@@ -319,6 +335,10 @@ var BUILD_TIME = '2026-11-27 00:47';
 var ZERO_WIDTH = /[\u200B-\u200D\uFEFF\u00AD]/g;
 
 function $(id){ return document.getElementById(id); }
+
+function nowMs(){
+  return (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+}
 
 function esc(s){
   return String(s === null || s === undefined ? '' : s)
@@ -328,6 +348,23 @@ function esc(s){
 
 function nfkc(s){
   try { return s.normalize('NFKC'); } catch(e){ return s; }
+}
+
+/* 逐字符找公共前后缀，把中间不同的那截单独圈出来 */
+function markDiff(show, other){
+  var s1 = String(show === undefined || show === null ? '' : show);
+  var s2 = String(other === undefined || other === null ? '' : other);
+  if (s1 === s2 || s1.length > 60 || s2.length > 60) return esc(s1);
+
+  var i = 0;
+  while (i < s1.length && i < s2.length && s1.charAt(i) === s2.charAt(i)) i++;
+  var j = 0;
+  while (j < s1.length - i && j < s2.length - i &&
+         s1.charAt(s1.length - 1 - j) === s2.charAt(s2.length - 1 - j)) j++;
+
+  var mid = s1.slice(i, s1.length - j);
+  if (!mid) return esc(s1);
+  return esc(s1.slice(0, i)) + '<span class="hl">' + esc(mid) + '</span>' + esc(s1.slice(s1.length - j));
 }
 
 /* 首尾噪音符号：反引号、各类引号、逗号、分号、顿号、竖线、星号、井号等 */
@@ -551,6 +588,7 @@ var state = {
   matchMode: 'exact',
   tolerance: 5,
   filter: 'all',
+  query: '',
   result: null,
   cmpTouched: false,
   colSig: ''
@@ -789,10 +827,12 @@ function fuzzyPair(rowsA, rowsB, ki, aList, bList, tol){
 }
 
 function analyze(){
+  var t0 = nowMs();
   var A = state.A, B = state.B;
 
   if (!A || !B || !A.rows.length || !B.rows.length){
     state.result = null;
+    updateMatchUI();
     renderStats();
     renderWarnings();
     renderTable();
@@ -916,10 +956,21 @@ function analyze(){
     fuzzyAdded: fuzzyAdded,
     skipped: (A.rows.length - validA) + (B.rows.length - validB)
   };
+  state.result.cost = Math.round((nowMs() - t0) * 10) / 10;
 
+  updateMatchUI();
   renderStats();
   renderWarnings();
   renderTable();
+  scheduleSaveDraft();
+}
+
+/* 匹配模式与误差框：只有比对键确实是时间类数据时才露面 */
+function updateMatchUI(){
+  var r = state.result;
+  var timeLike = !!(r && r.timeLike);
+  $('modeField').hidden = !timeLike;
+  $('tolField').hidden = !(timeLike && state.matchMode === 'fuzzy');
 }
 
 function displayKey(row, ki){
@@ -1020,16 +1071,11 @@ function renderTable(){
     return;
   }
 
-  var rows = r.items;
-  if (state.filter !== 'all'){
-    rows = [];
-    for (var i = 0; i < r.items.length; i++){
-      if (r.items[i].type === state.filter) rows.push(r.items[i]);
-    }
-  }
-
+  var rows = currentRows();
   if (!rows.length){
-    wrap.innerHTML = '<div class="empty">这个分类下没有记录</div>';
+    var qq = state.query.trim();
+    wrap.innerHTML = '<div class="empty">' +
+      (qq ? '没有包含「' + esc(qq) + '」的记录' : '这个分类下没有记录') + '</div>';
     return;
   }
 
@@ -1054,7 +1100,7 @@ function renderTable(){
 
     if (it.type === 'fuzzy' && it.bi >= 0){
       var bKey = displayKey(state.B.rows[it.bi], state.keyIndex);
-      html += '<td class="key"><span class="was">' + esc(it.key) + '</span><span class="arw">→</span><span class="pnow">' + esc(bKey) + '</span></td>';
+      html += '<td class="key"><span class="was">' + markDiff(it.key, bKey) + '</span><span class="arw">→</span><span class="pnow">' + markDiff(bKey, it.key) + '</span></td>';
     } else {
       html += '<td class="key">' + esc(it.key) + '</td>';
     }
@@ -1064,7 +1110,7 @@ function renderTable(){
       var av = it.ai >= 0 ? cellValue('A', it.ai, ci) : '';
       var bv = it.bi >= 0 ? cellValue('B', it.bi, ci) : '';
       if ((it.type === 'diff' || it.type === 'fuzzy') && it.diffs.indexOf(ci) >= 0){
-        html += '<td><span class="was">' + esc(av) + '</span><span class="arw">→</span><span class="now">' + esc(bv) + '</span></td>';
+        html += '<td><span class="was">' + markDiff(av, bv) + '</span><span class="arw">→</span><span class="now">' + markDiff(bv, av) + '</span></td>';
       } else if (it.type === 'onlyA'){
         html += '<td class="cellv">' + esc(av) + '</td>';
       } else if (it.type === 'onlyB'){
@@ -1115,6 +1161,13 @@ function renderTabs(){
   $('tabs').innerHTML = html;
   $('btnCopy').disabled = !total;
   $('btnCsv').disabled = !total;
+
+  var perf = $('perf');
+  if (r && r.cost !== undefined && state.A && state.B && state.A.rows.length && state.B.rows.length){
+    perf.textContent = state.A.rows.length + ' + ' + state.B.rows.length + ' 行 · ' + r.cost + ' ms';
+  } else {
+    perf.textContent = '';
+  }
 }
 
 /* ============================================================
@@ -1123,10 +1176,14 @@ function renderTabs(){
 function currentRows(){
   var r = state.result;
   if (!r) return [];
-  if (state.filter === 'all') return r.items;
+  var q = state.query.trim().toLowerCase();
+  if (state.filter === 'all' && !q) return r.items;
   var out = [];
   for (var i = 0; i < r.items.length; i++){
-    if (r.items[i].type === state.filter) out.push(r.items[i]);
+    var it = r.items[i];
+    if (state.filter !== 'all' && it.type !== state.filter) continue;
+    if (q && String(it.key).toLowerCase().indexOf(q) < 0) continue;
+    out.push(it);
   }
   return out;
 }
@@ -1311,18 +1368,26 @@ function bind(){
     var btn = e.target.closest('button[data-mode]');
     if (!btn) return;
     state.matchMode = btn.dataset.mode;
-    var btns = this.querySelectorAll('button');
-    for (var i = 0; i < btns.length; i++){
-      btns[i].classList.toggle('on', btns[i] === btn);
-    }
-    $('tolField').hidden = (state.matchMode !== 'fuzzy');
+    syncModeUI();
     analyze();
   });
 
-  $('tolSel').addEventListener('change', function(){
+  var tolTimer = null;
+  $('tolInput').addEventListener('input', function(){
     var v = parseInt(this.value, 10);
-    state.tolerance = (isNaN(v) || v <= 0) ? 5 : v;
-    analyze();
+    if (isNaN(v)) return;
+    state.tolerance = Math.min(3600, Math.max(1, v));
+    clearTimeout(tolTimer);
+    tolTimer = setTimeout(analyze, 350);
+  });
+  $('tolInput').addEventListener('blur', function(){
+    this.value = state.tolerance;
+  });
+
+  $('qInput').addEventListener('input', function(){
+    state.query = this.value;
+    renderTable();
+    scheduleSaveDraft();
   });
 
   $('cmpChips').addEventListener('click', function(e){
@@ -1455,6 +1520,63 @@ function bind(){
 /* ============================================================
    版本显示与更新检测
    ============================================================ */
+function syncModeUI(){
+  var btns = $('modeSeg').querySelectorAll('button');
+  for (var i = 0; i < btns.length; i++){
+    btns[i].classList.toggle('on', btns[i].dataset.mode === state.matchMode);
+  }
+}
+
+/* ============================================================
+   草稿保存：只写本机 localStorage，不联网
+   ============================================================ */
+var DRAFT_KEY = 'ttd_draft_v1';
+var draftTimer = null;
+
+function scheduleSaveDraft(){
+  clearTimeout(draftTimer);
+  draftTimer = setTimeout(saveDraft, 700);
+}
+
+function saveDraft(){
+  try {
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({
+      a: $('inputA').value,
+      b: $('inputB').value,
+      k: state.keyIndex,
+      c: state.cmpIndexes,
+      m: state.matchMode,
+      t: state.tolerance,
+      ic: state.ignoreCase,
+      q: state.query
+    }));
+  } catch(e){}
+}
+
+function loadDraft(){
+  try {
+    var raw = localStorage.getItem(DRAFT_KEY);
+    if (!raw) return false;
+    var d = JSON.parse(raw);
+    if (!d || (!d.a && !d.b)) return false;
+
+    if (d.a) $('inputA').value = d.a;
+    if (d.b) $('inputB').value = d.b;
+    if (typeof d.k === 'number') state.keyIndex = d.k;
+    if (Object.prototype.toString.call(d.c) === '[object Array]') state.cmpIndexes = d.c;
+    if (d.m === 'fuzzy' || d.m === 'exact') state.matchMode = d.m;
+    if (typeof d.t === 'number') state.tolerance = d.t;
+    if (typeof d.ic === 'boolean'){
+      state.ignoreCase = d.ic;
+      $('ignoreCase').checked = d.ic;
+    }
+    if (typeof d.q === 'string') state.query = d.q;
+    $('tolInput').value = state.tolerance;
+    $('qInput').value = state.query;
+    return true;
+  } catch(e){ return false; }
+}
+
 function initVersion(){
   var tag = $('verTag');
   tag.textContent = APP_VERSION;
@@ -1489,6 +1611,8 @@ window.__DIFF__ = {
   parseTable: parseTable,
   detectDelimiter: detectDelimiter,
   detectHeader: detectHeader,
+  markDiff: markDiff,
+  currentRows: currentRows,
   state: state,
   analyze: analyze,
   recompute: recompute
@@ -1509,9 +1633,22 @@ function setPlaceholders(){
    ============================================================ */
 setPlaceholders();
 bind();
+
+var restored = loadDraft();
+if (restored){
+  $('hdrA').dataset.touched = '';
+  $('hdrB').dataset.touched = '';
+  state.colSig = '';
+  syncModeUI();
+}
+
 recompute();
 initVersion();
 setTimeout(checkUpdate, 2500);
+
+if (restored){
+  setTimeout(function(){ toast('已恢复上次粘贴的数据'); }, 400);
+}
 
 })();
 </script>
