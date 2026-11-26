@@ -1,5 +1,7 @@
 # 两表差异比对
 
+**在线地址：<https://xtzl.github.io/two-table-diff/>**
+
 把两张表分别粘进来，自动找出差异。纯前端单文件，零依赖，**数据不上传**。
 
 ![界面预览](preview.png)
