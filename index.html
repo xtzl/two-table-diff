@@ -1,0 +1,1233 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="把两张表分别粘贴进来，自动找出单号缺失、金额对不上的差异记录。纯本地运行，数据不上传。">
+<title>两表差异比对</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F4F6FA;--card:#fff;--line:#E3E7EF;--line2:#EEF1F6;
+  --txt:#161D2E;--muted:#6B7590;--brand:#2F5597;--brand2:#4472C4;
+  --red:#B42318;--red-bg:#FEF3F2;--blue:#175CD3;--blue-bg:#EFF8FF;
+  --amber:#B54708;--amber-bg:#FFFAEB;--green:#067647;--green-bg:#ECFDF3;
+  --r:10px;
+}
+html,body{height:100%}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  background:var(--bg);color:var(--txt);line-height:1.5;
+  -webkit-font-smoothing:antialiased;font-size:14px;
+}
+.app{max-width:1360px;margin:0 auto;padding:22px 20px 64px}
+
+/* ---------- header ---------- */
+.hdr{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-bottom:18px;flex-wrap:wrap}
+.hdr-l{display:flex;align-items:center;gap:12px}
+.logo{width:36px;height:36px;border-radius:10px;background:linear-gradient(160deg,#3E68AE,#2F5597);display:grid;place-items:center;flex:none}
+.hdr h1{font-size:19px;font-weight:600;letter-spacing:-.01em}
+.hdr p{font-size:12.5px;color:var(--muted);margin-top:2px}
+.privacy{font-size:12px;color:var(--muted);background:#fff;border:1px solid var(--line);padding:5px 11px;border-radius:20px;display:flex;align-items:center;gap:5px}
+
+/* ---------- panes ---------- */
+.panes{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+.pane{background:var(--card);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;display:flex;flex-direction:column;transition:border-color .15s;min-width:0}
+.pane:focus-within{border-color:#A9BFE8}
+.pane-hd{display:flex;align-items:center;gap:8px;padding:10px 13px;border-bottom:1px solid var(--line2)}
+.badge{font-size:11px;font-weight:600;padding:2px 7px;border-radius:5px;letter-spacing:.02em}
+.badge-a{background:#EEF3FC;color:var(--brand)}
+.badge-b{background:#E9F5F8;color:#0E7090}
+.pane-t{font-size:13px;font-weight:500}
+.pane-meta{margin-left:auto;font-size:11.5px;color:#A8B1C4;font-variant-numeric:tabular-nums;flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pane-meta.ok{color:var(--green)}
+textarea{
+  width:100%;min-height:212px;border:0;outline:0;resize:vertical;display:block;
+  padding:12px 13px;font-family:ui-monospace,SFMono-Regular,Consolas,"Courier New",monospace;
+  font-size:12.5px;line-height:1.65;color:var(--txt);background:#FCFDFE;tab-size:8;
+}
+textarea::placeholder{color:#A8B1C4}
+.pane-ft{display:flex;align-items:center;gap:8px;padding:8px 13px;border-top:1px solid var(--line2);background:#FAFBFD;flex-wrap:wrap;row-gap:6px}
+.chk{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;color:var(--muted);cursor:pointer;user-select:none}
+.chk input{width:14px;height:14px;accent-color:var(--brand);cursor:pointer;margin:0}
+.link{background:none;border:0;color:var(--brand);font-size:12.5px;cursor:pointer;padding:2px 4px;border-radius:5px;font-family:inherit}
+.link:hover{background:#EEF3FC}
+.ft-actions{margin-left:auto;display:flex;gap:6px;align-items:center}
+button{font-family:inherit;font-size:13px;cursor:pointer;border-radius:8px;border:1px solid var(--line);background:#fff;padding:7px 13px;color:var(--txt);transition:.12s}
+button:hover{border-color:#C3CEE3;background:#FAFBFD}
+button:active{transform:translateY(.5px)}
+button:disabled{opacity:.45;cursor:not-allowed;transform:none}
+button.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+button.primary:hover{background:#274880;border-color:#274880}
+
+/* ---------- settings ---------- */
+.settings{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:13px 15px;margin-top:14px;display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap}
+.field{display:flex;flex-direction:column;gap:7px;min-width:0}
+.field.grow{flex:1}
+.field>label{font-size:11.5px;color:var(--muted);font-weight:500;letter-spacing:.02em}
+select{font-family:inherit;font-size:13px;padding:6px 26px 6px 10px;border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--txt);cursor:pointer;outline:0;appearance:none;
+  background-image:url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B7590' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 8px center}
+select:focus{border-color:#A9BFE8;box-shadow:0 0 0 3px rgba(47,85,151,.08)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;min-height:30px;align-items:center}
+.chip{border:1px solid var(--line);background:#fff;border-radius:7px;padding:4px 10px;font-size:12.5px;cursor:pointer;color:var(--muted);transition:.12s;font-family:inherit;line-height:1.5}
+.chip:hover{border-color:#C3CEE3;color:var(--txt)}
+.chip.on{background:#EEF3FC;border-color:#A9BFE8;color:var(--brand);font-weight:500}
+.hint{font-size:12px;color:#A8B1C4}
+
+/* ---------- stats ---------- */
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:18px}
+.stat{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--line);border-radius:var(--r);padding:12px 14px;cursor:pointer;transition:.14s;user-select:none}
+.stat:hover{border-color:#C3CEE3;border-left-color:inherit;transform:translateY(-1px)}
+.stat.on{background:#F7F9FD;box-shadow:0 0 0 3px rgba(47,85,151,.08);border-color:#A9BFE8}
+.stat.red{border-left-color:var(--red)}
+.stat.blue{border-left-color:var(--blue)}
+.stat.amber{border-left-color:#DC6803}
+.stat.green{border-left-color:#12B76A}
+.stat-v{font-size:25px;font-weight:600;line-height:1.1;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.stat.red .stat-v{color:var(--red)}
+.stat.blue .stat-v{color:var(--blue)}
+.stat.amber .stat-v{color:var(--amber)}
+.stat.green .stat-v{color:var(--green)}
+.stat-k{font-size:12px;color:var(--muted);margin-top:3px}
+
+/* ---------- warnings ---------- */
+.warn{background:var(--amber-bg);border:1px solid #FEDF89;color:var(--amber);border-radius:8px;padding:9px 12px;font-size:12.5px;margin-top:12px;line-height:1.55}
+.warn b{font-weight:600}
+.warn code{font-family:ui-monospace,Consolas,monospace;font-size:11.5px;background:#fff;padding:1px 5px;border-radius:4px;border:1px solid #FEDF89}
+
+/* ---------- toolbar ---------- */
+.toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:16px 0 10px;flex-wrap:wrap}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.tab{font-size:12.5px;padding:5px 11px;border-radius:7px;border:1px solid transparent;background:none;color:var(--muted);cursor:pointer;font-family:inherit}
+.tab:hover{background:#EAEEF6;color:var(--txt)}
+.tab.on{background:#fff;border-color:var(--line);color:var(--txt);font-weight:500;box-shadow:0 1px 2px rgba(16,24,40,.04)}
+.count{font-size:12px;color:var(--muted);margin-left:4px;font-variant-numeric:tabular-nums}
+.actions{display:flex;gap:8px}
+
+/* ---------- table ---------- */
+.table-wrap{background:var(--card);border:1px solid var(--line);border-radius:var(--r);overflow:auto;max-height:min(60vh,620px)}
+table{width:100%;border-collapse:separate;border-spacing:0;font-size:12.5px}
+thead th{position:sticky;top:0;background:#F7F9FC;text-align:left;padding:9px 12px;font-weight:600;font-size:11.5px;color:var(--muted);border-bottom:1px solid var(--line);white-space:nowrap;z-index:2;letter-spacing:.02em}
+tbody td{padding:8px 12px;border-bottom:1px solid var(--line2);white-space:nowrap;vertical-align:middle}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover td{background:#FAFBFD}
+td.key{font-family:ui-monospace,Consolas,monospace;font-weight:500;font-size:12px}
+td.rowno{color:#A8B1C4;font-variant-numeric:tabular-nums;font-size:11.5px}
+.tag{display:inline-block;font-size:11px;font-weight:600;padding:2px 7px;border-radius:5px;white-space:nowrap;line-height:1.5}
+.tag.onlyA{background:var(--red-bg);color:var(--red)}
+.tag.onlyB{background:var(--blue-bg);color:var(--blue)}
+.tag.diff{background:var(--amber-bg);color:var(--amber)}
+.tag.same{background:var(--green-bg);color:var(--green)}
+.dup{display:inline-block;margin-left:4px;font-size:10px;padding:1px 4px;border-radius:3px;background:#F2F4F7;color:#667085;border:1px solid #E4E7EC}
+.muted{color:#98A2B3}
+.cellv{color:#475467}
+.was{color:#98A2B3;text-decoration:line-through;text-decoration-color:#D0D5DD}
+.arw{color:#C3CEE3;margin:0 5px;font-size:11px}
+.now{color:var(--red);font-weight:600}
+.empty{padding:64px 20px;text-align:center;color:var(--muted);font-size:13px;line-height:1.8}
+.empty svg{display:block;margin:0 auto 12px;opacity:.5}
+.trunc{padding:10px 12px;font-size:12px;color:var(--amber);background:var(--amber-bg);border-radius:0 0 var(--r) var(--r)}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+@media(max-width:860px){
+  .app{padding:16px 14px 48px}
+  .panes{grid-template-columns:minmax(0,1fr)}
+  .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .settings{gap:16px}
+  .field.grow{flex-basis:100%;min-width:0}
+  .toolbar{align-items:flex-start;flex-direction:column}
+}
+@media(max-width:560px){
+  .pane-t{display:none}
+  .link{font-size:12px}
+  .stat-v{font-size:22px}
+  .settings{gap:14px 18px}
+  .hdr h1{font-size:17px}
+}
+</style>
+</head>
+<body>
+<h2 class="sr-only">两表差异比对工具：粘贴两张表的数据，自动找出单号缺失与金额不一致的记录</h2>
+
+<div class="app">
+
+  <header class="hdr">
+    <div class="hdr-l">
+      <div class="logo">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="4" width="7.2" height="16" rx="1.6"/>
+          <rect x="13.8" y="4" width="7.2" height="16" rx="1.6"/>
+          <path d="M5.6 9.2h2M5.6 12.4h2M16.4 9.2h2M16.4 12.4h2"/>
+        </svg>
+      </div>
+      <div>
+        <h1>两表差异比对</h1>
+        <p>左边粘表 A，右边粘表 B，自动找出单号缺失、金额对不上的记录</p>
+      </div>
+    </div>
+    <div class="privacy">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="4" y="10.5" width="16" height="10" rx="2"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/>
+      </svg>
+      纯浏览器本地运行 · 数据不上传
+    </div>
+  </header>
+
+  <section class="panes">
+    <div class="pane">
+      <div class="pane-hd">
+        <span class="badge badge-a">表 A</span>
+        <span class="pane-t">主表</span>
+        <span class="pane-meta" id="metaA">未粘贴</span>
+      </div>
+      <textarea id="inputA" spellcheck="false"></textarea>
+      <div class="pane-ft">
+        <label class="chk"><input type="checkbox" id="hdrA"> 首行是标题行</label>
+        <div class="ft-actions">
+          <button class="link" type="button" data-act="sample">填入示例</button>
+          <button class="link" type="button" data-act="clear" data-side="A">清空</button>
+        </div>
+      </div>
+    </div>
+    <div class="pane">
+      <div class="pane-hd">
+        <span class="badge badge-b">表 B</span>
+        <span class="pane-t">比对表</span>
+        <span class="pane-meta" id="metaB">未粘贴</span>
+      </div>
+      <textarea id="inputB" spellcheck="false"></textarea>
+      <div class="pane-ft">
+        <label class="chk"><input type="checkbox" id="hdrB"> 首行是标题行</label>
+        <div class="ft-actions">
+          <button class="link" type="button" data-act="sample">填入示例</button>
+          <button class="link" type="button" data-act="clear" data-side="B">清空</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="settings">
+    <div class="field">
+      <label for="keySel">比对键（用哪一列认「同一条」）</label>
+      <select id="keySel"><option value="0">第 1 列</option></select>
+    </div>
+    <div class="field grow">
+      <label>同时比对这几列的值（可多选，用来抓「单号相同但金额不同」）</label>
+      <div class="chips" id="cmpChips"><span class="hint">粘贴数据后这里会列出可选的列</span></div>
+    </div>
+    <div class="field">
+      <label for="delimSel">列分隔</label>
+      <select id="delimSel">
+        <option value="auto">自动识别</option>
+        <option value="tab">制表符 Tab</option>
+        <option value=",">逗号</option>
+        <option value=";">分号</option>
+        <option value="space">空格</option>
+        <option value="single">整行一列</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>选项</label>
+      <label class="chk"><input type="checkbox" id="ignoreCase" checked> 忽略大小写</label>
+    </div>
+  </section>
+
+  <section id="warnBox"></section>
+
+  <section class="stats" id="stats"></section>
+
+  <div class="toolbar">
+    <div class="tabs" id="tabs"></div>
+    <div class="actions">
+      <button type="button" id="btnCopy">复制清单</button>
+      <button type="button" class="primary" id="btnCsv">导出 CSV</button>
+    </div>
+  </div>
+
+  <div class="table-wrap" id="tableWrap"></div>
+
+</div>
+
+<script>
+(function(){
+'use strict';
+
+/* ============================================================
+   工具函数
+   ============================================================ */
+var ZERO_WIDTH = /[\u200B-\u200D\uFEFF\u00AD]/g;
+
+function $(id){ return document.getElementById(id); }
+
+function esc(s){
+  return String(s === null || s === undefined ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function nfkc(s){
+  try { return s.normalize('NFKC'); } catch(e){ return s; }
+}
+
+/* 比对用的规范化：去零宽、nbsp、全半角、首尾空格、压缩空白 */
+function normKey(v, ignoreCase){
+  if (v === null || v === undefined) return '';
+  var s = String(v).replace(ZERO_WIDTH, '').replace(/\u00A0/g, ' ');
+  s = nfkc(s).trim().replace(/\s+/g, ' ');
+  if (ignoreCase) s = s.toUpperCase();
+  return s;
+}
+
+/* 数字：允许 ¥ $ , 空格 千分位 与「元」后缀 */
+function parseNumber(v){
+  if (v === null || v === undefined) return null;
+  var s = nfkc(String(v).replace(ZERO_WIDTH,'')).trim();
+  if (!s) return null;
+  s = s.replace(/[¥$€£,\s]/g, '').replace(/元$/, '');
+  if (!/^-?\d+(\.\d+)?$/.test(s)) return null;
+  var n = Number(s);
+  return isFinite(n) ? n : null;
+}
+
+var DATE_RE = /^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/;
+function parseDate(v){
+  if (v === null || v === undefined) return null;
+  var s = nfkc(String(v)).trim().replace(/年|月/g, '-').replace(/日$/, '');
+  s = s.split(/\s+/)[0].replace(/\s+/g, '');
+  var m = s.match(DATE_RE);
+  if (!m) return null;
+  var y = +m[1], mo = +m[2], d = +m[3];
+  if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+  return y + '-' + (mo < 10 ? '0' : '') + mo + '-' + (d < 10 ? '0' : '') + d;
+}
+
+/* 值是否等价：先文本比，再数字比（188.00 == 188），再日期比（2026/11/1 == 2026-11-01） */
+function valuesEqual(a, b, ignoreCase){
+  var na = normKey(a, ignoreCase), nb = normKey(b, ignoreCase);
+  if (na === nb) return true;
+  if (na === '' || nb === '') return false;
+  var x = parseNumber(na), y = parseNumber(nb);
+  if (x !== null && y !== null) return Math.abs(x - y) < 0.005;
+  var da = parseDate(na), db = parseDate(nb);
+  if (da !== null && db !== null) return da === db;
+  return false;
+}
+
+/* ============================================================
+   解析
+   ============================================================ */
+function splitRows(text){
+  var out = [];
+  var lines = String(text).replace(/\r\n?/g, '\n').split('\n');
+  for (var i = 0; i < lines.length; i++){
+    if (lines[i].trim() === '') continue;
+    out.push({ raw: lines[i], lineNo: i + 1 });
+  }
+  return out;
+}
+
+var DELIM_CANDIDATES = ['\t', ';', ',', '|'];
+var THOUSANDS_RE = /^[¥$€£]?\s?-?\d{1,3}(,\d{3})+(\.\d+)?\s?元?$/;
+
+/* 整列都是「1,234.00」这种千分位数字时，逗号不是分隔符 */
+function allThousands(lines){
+  var hit = 0;
+  for (var i = 0; i < lines.length; i++){
+    if (THOUSANDS_RE.test(lines[i].trim())) hit++;
+  }
+  return lines.length > 0 && hit / lines.length >= 0.8;
+}
+
+function detectDelimiter(lines){
+  if (!lines.length) return null;
+  var sample = lines.slice(0, 60);
+
+  for (var d = 0; d < DELIM_CANDIDATES.length; d++){
+    var ch = DELIM_CANDIDATES[d];
+    if (ch === ',' && allThousands(sample)) continue;
+
+    var counts = [], multi = 0, i;
+    for (i = 0; i < sample.length; i++){
+      var n = sample[i].split(ch).length;
+      counts.push(n);
+      if (n > 1) multi++;
+    }
+    if (multi / counts.length < 0.75) continue;
+
+    var freq = {}, keys = [];
+    for (i = 0; i < counts.length; i++){
+      if (counts[i] < 2) continue;
+      if (!freq[counts[i]]) { freq[counts[i]] = 0; keys.push(counts[i]); }
+      freq[counts[i]]++;
+    }
+    if (!keys.length) continue;
+    var maxF = 0;
+    for (i = 0; i < keys.length; i++) maxF = Math.max(maxF, freq[keys[i]]);
+    if (maxF / counts.length >= 0.75) return ch;
+  }
+
+  for (var j = 0; j < sample.length; j++){
+    if (/\S\s{2,}\S/.test(sample[j])) return ' ';
+  }
+  return null;
+}
+
+function parseTable(text, delimMode){
+  var lines = splitRows(text);
+  if (!lines.length){
+    return { rows: [], width: 0, delimiter: null, lineNos: [] };
+  }
+
+  var delim;
+  if (delimMode === 'auto') delim = detectDelimiter(lines.map(function(l){ return l.raw; }));
+  else if (delimMode === 'single') delim = null;
+  else if (delimMode === 'space') delim = ' ';
+  else delim = delimMode;
+
+  var rows = [], i;
+  if (delim === null){
+    for (i = 0; i < lines.length; i++) rows.push([lines[i].raw.trim()]);
+  } else if (delim === ' '){
+    for (i = 0; i < lines.length; i++) rows.push(lines[i].raw.trim().split(/\s+/));
+  } else {
+    for (i = 0; i < lines.length; i++){
+      var parts = lines[i].raw.split(delim);
+      var arr = [];
+      for (var k = 0; k < parts.length; k++) arr.push(parts[k].trim());
+      rows.push(arr);
+    }
+  }
+
+  var width = 0;
+  for (i = 0; i < rows.length; i++) width = Math.max(width, rows[i].length);
+  for (i = 0; i < rows.length; i++){
+    while (rows[i].length < width) rows[i].push('');
+  }
+
+  var lineNos = [];
+  for (i = 0; i < lines.length; i++) lineNos.push(lines[i].lineNo);
+
+  return { rows: rows, width: width, delimiter: delim, lineNos: lineNos };
+}
+
+/* ============================================================
+   表头识别
+   ============================================================ */
+var HEADER_CN = ('序号 行号 单号 订单号 订单编号 订单 卡号 会员卡号 会员号 会员 编号 流水号 ' +
+  '金额 实收 应收 实收金额 应收金额 交易额 支付金额 价格 单价 数量 次数 ' +
+  '日期 消费日期 交易日期 时间 姓名 会员姓名 手机 手机号 电话 门店 店铺 门店名称 ' +
+  '状态 订单状态 支付方式 备注 类型 操作员 商品 项目 名称').split(' ');
+var HEADER_EN = ('id no order order_no orderno orderid card card_no cardno ' +
+  'amount date name phone store status qty price remark index seq type').split(' ');
+
+var SET_CN = {}, SET_EN = {};
+(function(){
+  for (var i = 0; i < HEADER_CN.length; i++) SET_CN[HEADER_CN[i]] = 1;
+  for (var j = 0; j < HEADER_EN.length; j++) SET_EN[HEADER_EN[j]] = 1;
+})();
+
+function isHeaderCell(v){
+  var s = nfkc(String(v)).trim();
+  if (!s) return false;
+  if (SET_CN[s]) return true;
+  if (SET_EN[s.toLowerCase()]) return true;
+  return false;
+}
+
+function detectHeader(rows){
+  if (rows.length < 2) return false;
+  var first = rows[0], rest = rows.slice(1);
+
+  var keyFirst = first[0] || '';
+  var withDigit = 0;
+  for (var i = 0; i < rest.length; i++){
+    if (/\d/.test(rest[i][0] || '')) withDigit++;
+  }
+  if (!/\d/.test(keyFirst) && withDigit / rest.length >= 0.8) return true;
+
+  var hits = 0;
+  for (var j = 0; j < first.length; j++) if (isHeaderCell(first[j])) hits++;
+  if (hits >= Math.max(1, Math.ceil(first.length * 0.5))) return true;
+
+  return false;
+}
+
+/* ============================================================
+   状态
+   ============================================================ */
+var state = {
+  A: null, B: null,
+  keyIndex: 0,
+  cmpIndexes: [],
+  delim: 'auto',
+  ignoreCase: true,
+  filter: 'all',
+  result: null,
+  cmpTouched: false,
+  colSig: ''
+};
+
+var TAGS = { onlyA: '只在表A', onlyB: '只在表B', diff: '值不同', same: '一致' };
+
+var SAMPLE_A =
+  '单号\t会员卡号\t消费日期\t金额\t门店\n' +
+  'SO2026110101\tVIP1032\t2026-11-01\t188.00\t欢乐海岸店\n' +
+  'SO2026110102\tVIP1108\t2026-11-01\t96.00\t万象城店\n' +
+  'SO2026110103\tVIP1032\t2026-11-02\t260.00\t欢乐海岸店\n' +
+  'SO2026110104\tVIP1205\t2026-11-02\t78.00\t龙华店\n' +
+  'SO2026110105\tVIP1108\t2026-11-03\t352.00\t万象城店\n' +
+  'SO2026110106\tVIP1310\t2026-11-03\t128.00\t龙华店\n' +
+  'SO2026110107\tVIP1032\t2026-11-04\t168.00\t欢乐海岸店\n' +
+  'SO2026110119\tVIP1032\t2026-11-10\t268.00\t欢乐海岸店\n' +
+  'SO2026110120\tVIP1205\t2026-11-10\t184.00\t万象城店';
+
+var SAMPLE_B =
+  '单号\t会员卡号\t消费日期\t金额\t门店\n' +
+  'SO2026110101\tVIP1032\t2026-11-01\t188.00\t欢乐海岸店\n' +
+  'SO2026110102\tVIP1108\t2026-11-01\t96.00\t万象城店\n' +
+  'SO2026110103\tVIP1032\t2026-11-02\t260.00\t欢乐海岸店\n' +
+  'SO2026110104\tVIP1205\t2026-11-02\t78.00\t龙华店\n' +
+  'SO2026110105\tVIP1108\t2026-11-03\t325.00\t万象城店\n' +
+  'SO2026110106\tVIP1310\t2026-11-03\t128.00\t龙华店\n' +
+  'SO2026110107\tVIP1032\t2026-11-04\t168.00\t欢乐海岸店\n' +
+  'SO2026110121\tVIP1401\t2026-11-10\t328.00\t龙华店\n' +
+  'SO2026110122\tVIP1402\t2026-11-10\t108.00\t欢乐海岸店';
+
+/* ============================================================
+   读取一侧
+   ============================================================ */
+function readSide(side){
+  var ta = $('input' + side);
+  var text = ta.value;
+  var p = parseTable(text, state.delim);
+  var cb = $('hdr' + side);
+  var hasRows = p.rows.length > 0;
+
+  if (cb.dataset.touched !== '1'){
+    cb.checked = hasRows ? detectHeader(p.rows) : false;
+  }
+  var hasHeader = cb.checked && hasRows;
+
+  var header = hasHeader ? p.rows[0].slice() : null;
+  var dataRows = hasHeader ? p.rows.slice(1) : p.rows;
+  var lineNos = hasHeader ? p.lineNos.slice(1) : p.lineNos;
+
+  return {
+    text: text,
+    rows: dataRows,
+    header: header,
+    lineNos: lineNos,
+    width: p.width,
+    delimiter: p.delimiter,
+    totalLines: p.rows.length,
+    hasHeader: hasHeader
+  };
+}
+
+/* ============================================================
+   列名 / 列选择 UI
+   ============================================================ */
+function colName(idx){
+  var A = state.A, B = state.B;
+  var a = A && A.header && A.header[idx] ? A.header[idx] : '';
+  var b = B && B.header && B.header[idx] ? B.header[idx] : '';
+  if (a) return a + (b && b !== a ? ' / ' + b : '');
+  if (b) return b;
+  return '第' + (idx + 1) + '列';
+}
+
+function shortName(idx){
+  var A = state.A, B = state.B;
+  var a = A && A.header && A.header[idx] ? A.header[idx] : '';
+  var b = B && B.header && B.header[idx] ? B.header[idx] : '';
+  if (a) return a;
+  if (b) return b;
+  return '第' + (idx + 1) + '列';
+}
+
+var AMOUNT_RE = /(金额|实收|应收|交易额|支付|价格|单价|amount|price|total|money)/i;
+
+function rebuildColumnUI(){
+  var A = state.A, B = state.B;
+  var width = Math.max(A ? A.width : 0, B ? B.width : 0);
+  var sel = $('keySel');
+  var box = $('cmpChips');
+
+  sel.innerHTML = '';
+  if (!width){
+    sel.innerHTML = '<option value="0">第 1 列</option>';
+    box.innerHTML = '<span class="hint">粘贴数据后这里会列出可选的列</span>';
+    state.cmpIndexes = [];
+    return;
+  }
+
+  for (var i = 0; i < width; i++){
+    var opt = document.createElement('option');
+    opt.value = String(i);
+    opt.textContent = shortName(i) + '（第' + (i + 1) + '列）';
+    sel.appendChild(opt);
+  }
+  if (width >= 2){
+    var optC = document.createElement('option');
+    optC.value = '-1';
+    optC.textContent = '组合键：第1列 + 第2列';
+    sel.appendChild(optC);
+  }
+
+  if (state.keyIndex !== -1 && state.keyIndex >= width) state.keyIndex = 0;
+  if (state.keyIndex === -1 && width < 2) state.keyIndex = 0;
+  sel.value = String(state.keyIndex);
+
+  /* 过滤掉越界与键列 */
+  var keep = [];
+  for (var c = 0; c < state.cmpIndexes.length; c++){
+    var ci = state.cmpIndexes[c];
+    if (ci < width && ci !== state.keyIndex) keep.push(ci);
+  }
+  state.cmpIndexes = keep;
+
+  /* 首次自动挑出「金额」类列 */
+  if (!state.cmpTouched && !keep.length && state.A && state.A.header){
+    var guess = [];
+    for (var g = 0; g < width; g++){
+      if (g === state.keyIndex) continue;
+      if (AMOUNT_RE.test(String(state.A.header[g] || ''))) guess.push(g);
+    }
+    state.cmpIndexes = guess.slice(0, 3);
+  }
+
+  box.innerHTML = '';
+  var count = 0;
+  for (var k = 0; k < width; k++){
+    if (k === state.keyIndex) continue;
+    count++;
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'chip' + (state.cmpIndexes.indexOf(k) >= 0 ? ' on' : '');
+    btn.dataset.idx = String(k);
+    btn.textContent = colName(k);
+    box.appendChild(btn);
+  }
+  if (!count){
+    box.innerHTML = '<span class="hint">当前只有一列，只能比对「有没有」，无法比对数值</span>';
+  }
+}
+
+/* ============================================================
+   核心比对
+   ============================================================ */
+function keyOf(row, ki){
+  if (ki === -1){
+    return normKey(row[0], state.ignoreCase) + '\u0001' + normKey(row[1], state.ignoreCase);
+  }
+  return normKey(row[ki], state.ignoreCase);
+}
+
+function buildIndex(rows, ki){
+  var map = new Map();
+  for (var i = 0; i < rows.length; i++){
+    var k = keyOf(rows[i], ki);
+    if (!k || k === '\u0001') continue;
+    if (!map.has(k)) map.set(k, []);
+    map.get(k).push(i);
+  }
+  return map;
+}
+
+function analyze(){
+  var A = state.A, B = state.B;
+
+  if (!A || !B || !A.rows.length || !B.rows.length){
+    state.result = null;
+    renderStats();
+    renderWarnings();
+    renderTable();
+    return;
+  }
+
+  var ki = state.keyIndex;
+  var cmp = [];
+  for (var c = 0; c < state.cmpIndexes.length; c++){
+    var ci = state.cmpIndexes[c];
+    if (ci < A.width && ci < B.width) cmp.push(ci);
+  }
+
+  var idxA = buildIndex(A.rows, ki);
+  var idxB = buildIndex(B.rows, ki);
+
+  var dupA = [], dupB = [];
+  idxA.forEach(function(v, k){ if (v.length > 1) dupA.push({ key: k, count: v.length }); });
+  idxB.forEach(function(v, k){ if (v.length > 1) dupB.push({ key: k, count: v.length }); });
+
+  var items = [];
+  var matched = new Set();
+
+  idxA.forEach(function(aIdxs, k){
+    var bIdxs = idxB.get(k);
+    if (!bIdxs){
+      for (var t = 0; t < aIdxs.length; t++){
+        items.push({
+          type: 'onlyA',
+          key: displayKey(A.rows[aIdxs[t]], ki),
+          ai: aIdxs[t], bi: -1, diffs: [],
+          dup: aIdxs.length > 1
+        });
+      }
+      return;
+    }
+    matched.add(k);
+    var ai = aIdxs[0], bi = bIdxs[0];
+    var diffs = [];
+    for (var d = 0; d < cmp.length; d++){
+      if (!valuesEqual(A.rows[ai][cmp[d]], B.rows[bi][cmp[d]], state.ignoreCase)) diffs.push(cmp[d]);
+    }
+    items.push({
+      type: diffs.length ? 'diff' : 'same',
+      key: displayKey(A.rows[ai], ki),
+      ai: ai, bi: bi, diffs: diffs,
+      dup: aIdxs.length > 1 || bIdxs.length > 1
+    });
+  });
+
+  idxB.forEach(function(bIdxs, k){
+    if (matched.has(k)) return;
+    for (var t = 0; t < bIdxs.length; t++){
+      items.push({
+        type: 'onlyB',
+        key: displayKey(B.rows[bIdxs[t]], ki),
+        ai: -1, bi: bIdxs[t], diffs: [],
+        dup: bIdxs.length > 1
+      });
+    }
+  });
+
+  var counts = { onlyA: 0, onlyB: 0, diff: 0, same: 0 };
+  for (var i = 0; i < items.length; i++) counts[items[i].type]++;
+
+  var validA = 0, validB = 0;
+  idxA.forEach(function(v){ validA += v.length; });
+  idxB.forEach(function(v){ validB += v.length; });
+
+  state.result = {
+    items: items, counts: counts, cmp: cmp,
+    dupA: dupA, dupB: dupB,
+    skipped: (A.rows.length - validA) + (B.rows.length - validB)
+  };
+
+  renderStats();
+  renderWarnings();
+  renderTable();
+}
+
+function displayKey(row, ki){
+  if (ki === -1) return (row[0] || '') + ' + ' + (row[1] || '');
+  return String(row[ki] === undefined ? '' : row[ki]);
+}
+
+/* ============================================================
+   渲染
+   ============================================================ */
+function renderStats(){
+  var r = state.result;
+  var counts = r ? r.counts : { onlyA: 0, onlyB: 0, diff: 0, same: 0 };
+  var defs = [
+    { k: 'onlyA', label: '只在表 A', cls: 'red' },
+    { k: 'onlyB', label: '只在表 B', cls: 'blue' },
+    { k: 'diff', label: '值不同', cls: 'amber' },
+    { k: 'same', label: '完全一致', cls: 'green' }
+  ];
+  var html = '';
+  for (var i = 0; i < defs.length; i++){
+    var d = defs[i];
+    html += '<div class="stat ' + d.cls + (state.filter === d.k ? ' on' : '') + '" data-filter="' + d.k + '" role="button" tabindex="0">' +
+              '<div class="stat-v">' + counts[d.k] + '</div>' +
+              '<div class="stat-k">' + d.label + '</div>' +
+            '</div>';
+  }
+  $('stats').innerHTML = html;
+}
+
+function renderWarnings(){
+  var box = $('warnBox');
+  var r = state.result;
+  if (!r){ box.innerHTML = ''; return; }
+
+  var msgs = [];
+  if (r.dupA.length){
+    msgs.push('<b>表 A 有 ' + r.dupA.length + ' 个重复的键</b>（例如 ' +
+      r.dupA.slice(0, 3).map(function(d){ return '<code>' + esc(d.key) + '</code> ×' + d.count; }).join('、') +
+      '）。同一键出现多行时，只会拿第一条去比对，建议改用「组合键」或换一列当比对键。');
+  }
+  if (r.dupB.length){
+    msgs.push('<b>表 B 有 ' + r.dupB.length + ' 个重复的键</b>（例如 ' +
+      r.dupB.slice(0, 3).map(function(d){ return '<code>' + esc(d.key) + '</code> ×' + d.count; }).join('、') + '）。');
+  }
+  if (r.skipped > 0){
+    msgs.push('有 <b>' + r.skipped + '</b> 行的比对键为空，已跳过（无法参与比对）。');
+  }
+  if (state.A && state.B && state.A.width !== state.B.width){
+    msgs.push('两张表的列数不同（表A ' + state.A.width + ' 列 / 表B ' + state.B.width + ' 列），超出部分的列不参与比对。');
+  }
+
+  if (!msgs.length){ box.innerHTML = ''; return; }
+  var html = '';
+  for (var i = 0; i < msgs.length; i++) html += '<div class="warn">' + msgs[i] + '</div>';
+  box.innerHTML = html;
+}
+
+function cellValue(side, rowIdx, colIdx){
+  var info = state[side];
+  if (!info || rowIdx < 0 || !info.rows[rowIdx]) return '';
+  var v = info.rows[rowIdx][colIdx];
+  return v === undefined || v === null ? '' : v;
+}
+
+function renderTable(){
+  var wrap = $('tableWrap');
+  var r = state.result;
+  var hasData = state.A && state.A.rows.length && state.B && state.B.rows.length;
+
+  renderTabs();
+
+  if (!r || !hasData){
+    wrap.innerHTML = '<div class="empty">' +
+      '<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#C3CEE3" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' +
+      '<rect x="3" y="4" width="7.2" height="16" rx="1.6"/><rect x="13.8" y="4" width="7.2" height="16" rx="1.6"/></svg>' +
+      '把两张表分别粘贴到上面的输入框<br>结果会实时出现在这里，不需要点任何按钮</div>';
+    return;
+  }
+
+  if (!r.items.length){
+    wrap.innerHTML = '<div class="empty">两张表没有可比对的数据</div>';
+    return;
+  }
+
+  var rows = r.items;
+  if (state.filter !== 'all'){
+    rows = [];
+    for (var i = 0; i < r.items.length; i++){
+      if (r.items[i].type === state.filter) rows.push(r.items[i]);
+    }
+  }
+
+  if (!rows.length){
+    wrap.innerHTML = '<div class="empty">这个分类下没有记录</div>';
+    return;
+  }
+
+  var LIMIT = 3000;
+  var shown = rows.slice(0, LIMIT);
+  var cmp = r.cmp;
+  var keyName = keyColumnLabel();
+
+  var html = '<table><thead><tr>' +
+    '<th style="width:92px">类型</th>' +
+    '<th style="width:1%">' + esc(keyName) + '</th>';
+
+  for (var c = 0; c < cmp.length; c++) html += '<th style="width:1%">' + esc(colName(cmp[c])) + '</th>';
+  html += '<th style="width:62px">A 行</th><th style="width:62px">B 行</th><th></th></tr></thead><tbody>';
+
+  for (var t = 0; t < shown.length; t++){
+    var it = shown[t];
+    html += '<tr>';
+    html += '<td><span class="tag ' + it.type + '">' + TAGS[it.type] + '</span>' +
+            (it.dup ? '<span class="dup" title="该键在表中出现多次">重复</span>' : '') + '</td>';
+    html += '<td class="key">' + esc(it.key) + '</td>';
+
+    for (var m = 0; m < cmp.length; m++){
+      var ci = cmp[m];
+      var av = it.ai >= 0 ? cellValue('A', it.ai, ci) : '';
+      var bv = it.bi >= 0 ? cellValue('B', it.bi, ci) : '';
+      if (it.type === 'diff' && it.diffs.indexOf(ci) >= 0){
+        html += '<td><span class="was">' + esc(av) + '</span><span class="arw">→</span><span class="now">' + esc(bv) + '</span></td>';
+      } else if (it.type === 'onlyA'){
+        html += '<td class="cellv">' + esc(av) + '</td>';
+      } else if (it.type === 'onlyB'){
+        html += '<td class="cellv">' + esc(bv) + '</td>';
+      } else {
+        html += '<td class="muted">' + esc(av) + '</td>';
+      }
+    }
+
+    html += '<td class="rowno">' + (it.ai >= 0 ? state.A.lineNos[it.ai] : '—') + '</td>';
+    html += '<td class="rowno">' + (it.bi >= 0 ? state.B.lineNos[it.bi] : '—') + '</td>';
+    html += '<td></td>';
+    html += '</tr>';
+  }
+  html += '</tbody></table>';
+
+  if (rows.length > LIMIT){
+    html += '<div class="trunc">结果共 ' + rows.length + ' 条，页面只显示前 ' + LIMIT + ' 条。完整清单请点「导出 CSV」。</div>';
+  }
+
+  wrap.innerHTML = html;
+}
+
+function keyColumnLabel(){
+  if (state.keyIndex === -1) return '组合键（第1列+第2列）';
+  if (state.A && state.A.header) return shortName(state.keyIndex);
+  return '比对键';
+}
+
+function renderTabs(){
+  var r = state.result;
+  var counts = r ? r.counts : { onlyA: 0, onlyB: 0, diff: 0, same: 0 };
+  var total = r ? r.items.length : 0;
+  var defs = [
+    { k: 'all', label: '全部', n: total },
+    { k: 'onlyA', label: '只在表A', n: counts.onlyA },
+    { k: 'onlyB', label: '只在表B', n: counts.onlyB },
+    { k: 'diff', label: '值不同', n: counts.diff },
+    { k: 'same', label: '一致', n: counts.same }
+  ];
+  var html = '';
+  for (var i = 0; i < defs.length; i++){
+    var d = defs[i];
+    html += '<button type="button" class="tab' + (state.filter === d.k ? ' on' : '') + '" data-filter="' + d.k + '">' +
+              d.label + '<span class="count">' + d.n + '</span></button>';
+  }
+  $('tabs').innerHTML = html;
+  $('btnCopy').disabled = !total;
+  $('btnCsv').disabled = !total;
+}
+
+/* ============================================================
+   导出
+   ============================================================ */
+function currentRows(){
+  var r = state.result;
+  if (!r) return [];
+  if (state.filter === 'all') return r.items;
+  var out = [];
+  for (var i = 0; i < r.items.length; i++){
+    if (r.items[i].type === state.filter) out.push(r.items[i]);
+  }
+  return out;
+}
+
+function buildMatrix(){
+  var r = state.result;
+  if (!r) return [];
+  var cmp = r.cmp;
+  var keyName = keyColumnLabel();
+
+  var head = ['差异类型', keyName];
+  for (var i = 0; i < cmp.length; i++) head.push(colName(cmp[i]) + '（表A）');
+  for (var j = 0; j < cmp.length; j++) head.push(colName(cmp[j]) + '（表B）');
+  head.push('表A行号', '表B行号');
+
+  var rows = currentRows();
+  var out = [head];
+
+  for (var t = 0; t < rows.length; t++){
+    var it = rows[t];
+    var line = [TAGS[it.type], it.key];
+    for (var a = 0; a < cmp.length; a++) line.push(it.ai >= 0 ? cellValue('A', it.ai, cmp[a]) : '');
+    for (var b = 0; b < cmp.length; b++) line.push(it.bi >= 0 ? cellValue('B', it.bi, cmp[b]) : '');
+    line.push(it.ai >= 0 ? state.A.lineNos[it.ai] : '');
+    line.push(it.bi >= 0 ? state.B.lineNos[it.bi] : '');
+    out.push(line);
+  }
+  return out;
+}
+
+function buildTSV(){
+  var m = buildMatrix();
+  if (!m.length) return '';
+  var lines = [];
+  for (var i = 0; i < m.length; i++) lines.push(m[i].join('\t'));
+  return lines.join('\n');
+}
+
+function csvCell(v){
+  var s = String(v === null || v === undefined ? '' : v);
+  if (/[",\n\r]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+  return s;
+}
+
+function buildCSV(){
+  var m = buildMatrix();
+  var lines = [];
+  for (var i = 0; i < m.length; i++){
+    var cells = [];
+    for (var j = 0; j < m[i].length; j++) cells.push(csvCell(m[i][j]));
+    lines.push(cells.join(','));
+  }
+  return '\uFEFF' + lines.join('\r\n');
+}
+
+function stamp(){
+  var d = new Date();
+  function p(n){ return (n < 10 ? '0' : '') + n; }
+  return d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + '_' + p(d.getHours()) + p(d.getMinutes());
+}
+
+function copyText(text){
+  return new Promise(function(resolve){
+    if (navigator.clipboard && window.isSecureContext){
+      navigator.clipboard.writeText(text).then(function(){ resolve(true); }, function(){ resolve(fallbackCopy(text)); });
+      return;
+    }
+    resolve(fallbackCopy(text));
+  });
+}
+
+function fallbackCopy(text){
+  try {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.top = '-1000px';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    ta.setSelectionRange(0, ta.value.length);
+    var ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    return ok;
+  } catch(e){ return false; }
+}
+
+function toast(msg, bad){
+  var el = document.createElement('div');
+  el.textContent = msg;
+  el.style.cssText = 'position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(8px);' +
+    'background:' + (bad ? '#B42318' : '#161D2E') + ';color:#fff;font-size:13px;padding:9px 18px;' +
+    'border-radius:8px;z-index:99;opacity:0;transition:opacity .18s,transform .18s;box-shadow:0 8px 24px rgba(16,24,40,.18)';
+  document.body.appendChild(el);
+  requestAnimationFrame(function(){
+    el.style.opacity = '1';
+    el.style.transform = 'translateX(-50%) translateY(0)';
+  });
+  setTimeout(function(){
+    el.style.opacity = '0';
+    el.style.transform = 'translateX(-50%) translateY(8px)';
+    setTimeout(function(){ el.remove(); }, 220);
+  }, 1900);
+}
+
+/* ============================================================
+   主流程
+   ============================================================ */
+function updateMeta(){
+  ['A', 'B'].forEach(function(side){
+    var info = state[side];
+    var el = $('meta' + side);
+    if (!info || !info.text.trim()){
+      el.textContent = '未粘贴';
+      el.className = 'pane-meta';
+      return;
+    }
+    if (!info.totalLines){
+      el.textContent = '无有效数据';
+      el.className = 'pane-meta';
+      return;
+    }
+    el.textContent = info.rows.length + ' 行 × ' + info.width + ' 列' + (info.hasHeader ? ' · 含标题' : '');
+    el.className = 'pane-meta ok';
+  });
+}
+
+function recompute(){
+  state.A = readSide('A');
+  state.B = readSide('B');
+  updateMeta();
+
+  var sig = [
+    state.A.width, state.B.width,
+    state.A.header ? state.A.header.join('\u0001') : '',
+    state.B.header ? state.B.header.join('\u0001') : ''
+  ].join('\u0002');
+
+  if (sig !== state.colSig){
+    state.colSig = sig;
+    rebuildColumnUI();
+  }
+
+  analyze();
+}
+
+var timer = null;
+function schedule(){
+  clearTimeout(timer);
+  timer = setTimeout(recompute, 200);
+}
+
+/* ============================================================
+   事件
+   ============================================================ */
+function bind(){
+  $('inputA').addEventListener('input', schedule);
+  $('inputB').addEventListener('input', schedule);
+
+  ['A', 'B'].forEach(function(side){
+    $('hdr' + side).addEventListener('change', function(){
+      this.dataset.touched = '1';
+      recompute();
+    });
+  });
+
+  $('keySel').addEventListener('change', function(){
+    var v = parseInt(this.value, 10);
+    state.keyIndex = isNaN(v) ? 0 : v;
+    state.cmpIndexes = state.cmpIndexes.filter(function(i){ return i !== state.keyIndex; });
+    rebuildColumnUI();
+    analyze();
+  });
+
+  $('cmpChips').addEventListener('click', function(e){
+    var btn = e.target.closest('.chip');
+    if (!btn) return;
+    var idx = parseInt(btn.dataset.idx, 10);
+    if (isNaN(idx)) return;
+    state.cmpTouched = true;
+    var pos = state.cmpIndexes.indexOf(idx);
+    if (pos >= 0) state.cmpIndexes.splice(pos, 1);
+    else state.cmpIndexes.push(idx);
+    state.cmpIndexes.sort(function(a, b){ return a - b; });
+    btn.classList.toggle('on');
+    analyze();
+  });
+
+  $('delimSel').addEventListener('change', function(){
+    var v = this.value;
+    state.delim = (v === 'tab') ? '\t' : v;
+    recompute();
+  });
+
+  $('ignoreCase').addEventListener('change', function(){
+    state.ignoreCase = this.checked;
+    analyze();
+  });
+
+  $('stats').addEventListener('click', function(e){
+    var card = e.target.closest('.stat');
+    if (!card) return;
+    var f = card.dataset.filter;
+    state.filter = (state.filter === f) ? 'all' : f;
+    renderStats();
+    renderTable();
+  });
+
+  $('tabs').addEventListener('click', function(e){
+    var tab = e.target.closest('.tab');
+    if (!tab) return;
+    state.filter = tab.dataset.filter;
+    renderStats();
+    renderTable();
+  });
+
+  document.querySelectorAll('[data-act]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var act = btn.dataset.act;
+      if (act === 'sample'){
+        $('inputA').value = SAMPLE_A;
+        $('inputB').value = SAMPLE_B;
+        $('hdrA').dataset.touched = '';
+        $('hdrB').dataset.touched = '';
+        state.cmpTouched = false;
+        state.colSig = '';
+        state.filter = 'all';
+        recompute();
+      } else if (act === 'clear'){
+        var side = btn.dataset.side;
+        $('input' + side).value = '';
+        $('hdr' + side).dataset.touched = '';
+        state.colSig = '';
+        recompute();
+      }
+    });
+  });
+
+  $('btnCopy').addEventListener('click', function(){
+    var tsv = buildTSV();
+    if (!tsv){ toast('没有可复制的内容', true); return; }
+    copyText(tsv).then(function(ok){
+      if (ok) toast('已复制 ' + (currentRows().length) + ' 条，可直接粘回 Excel');
+      else toast('复制失败，请手动全选表格复制', true);
+    });
+  });
+
+  $('btnCsv').addEventListener('click', function(){
+    var csv = buildCSV();
+    if (!csv){ toast('没有可导出的内容', true); return; }
+    var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = '两表差异_' + stamp() + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 1500);
+    toast('已导出 ' + (currentRows().length) + ' 条');
+  });
+
+  /* 拖入文件 */
+  ['A', 'B'].forEach(function(side){
+    var ta = $('input' + side);
+    ta.addEventListener('dragover', function(e){
+      e.preventDefault();
+      ta.style.background = '#EEF3FC';
+    });
+    ta.addEventListener('dragleave', function(){
+      ta.style.background = '';
+    });
+    ta.addEventListener('drop', function(e){
+      e.preventDefault();
+      ta.style.background = '';
+      var f = e.dataTransfer.files && e.dataTransfer.files[0];
+      if (!f) return;
+      if (!/\.(csv|txt|tsv)$/i.test(f.name)){
+        toast('请拖入 .csv / .txt / .tsv 文件，或直接从 Excel 复制粘贴', true);
+        return;
+      }
+      var reader = new FileReader();
+      reader.onload = function(ev){
+        ta.value = String(ev.target.result || '');
+        $('hdr' + side).dataset.touched = '';
+        state.colSig = '';
+        recompute();
+      };
+      reader.readAsText(f, 'UTF-8');
+    });
+  });
+}
+
+/* 供自动化测试与调试使用，不影响页面功能 */
+window.__DIFF__ = {
+  normKey: normKey,
+  parseNumber: parseNumber,
+  parseDate: parseDate,
+  valuesEqual: valuesEqual,
+  parseTable: parseTable,
+  detectDelimiter: detectDelimiter,
+  detectHeader: detectHeader,
+  state: state,
+  analyze: analyze,
+  recompute: recompute
+};
+
+/* 输入框提示文案用 JS 设置，避免 HTML 属性里换行转义问题 */
+function setPlaceholders(){
+  var ph = '从 Excel 选中区域 → Ctrl+C → 在这里 Ctrl+V\n\n' +
+    '· 支持多列，第一行可以是标题行\n' +
+    '· 空行会自动忽略\n' +
+    '· 也可以直接拖入 .csv / .txt 文件';
+  $('inputA').placeholder = ph;
+  $('inputB').placeholder = ph;
+}
+
+/* ============================================================
+   启动
+   ============================================================ */
+setPlaceholders();
+bind();
+recompute();
+
+})();
+</script>
+</body>
+</html>
